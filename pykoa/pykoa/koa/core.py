@@ -74,8 +74,6 @@ class Archive:
         debugfile: a file path for the debug output
  
 	"""
-        
-#        print ('Enter Archive.init')
  
         if ('debugfile' in kwargs):
             
@@ -101,7 +99,6 @@ class Archive:
 #    during dev or test, baseurl will be a keyword input
 #
         self.baseurl = conf.server
-
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
 
@@ -160,13 +157,30 @@ class Archive:
                                  userid and password 
         """
 
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
+        
+ 
         if self.debug:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter login:')
-        
-        if self.debug:
-            logging.debug ('')
             logging.debug (f'cookiepath= [{cookiepath:s}]')
 
         if (len(cookiepath) == 0):
@@ -206,8 +220,30 @@ class Archive:
         password = urllib.parse.quote (password)
 
 #
+#    retrieve baseurl from conf class;
+#
+        self.baseurl = conf.server
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl (from conf)= {self.baseurl:s}')
+
+#
 #  url for login
 #
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+
+        self.login_url = self.baseurl + '/KoaAPI/nph-koaLogin?'
+        
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'login_url= [{self.login_url:s}]')
+	
         param = dict()
         param['userid'] = userid
         param['password'] = password
@@ -352,12 +388,31 @@ class Archive:
                              KOA data.
         
 	format:  Output format: votable, ascii.ipac, etc.. 
-	         (default: ipac)
+	         (default: ipac for KOA)
         
 	maxrec:  maximum records to be returned 
 	         default: '0'
         """
-   
+ 
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
+        
         if self.debug:
             logging.debug ('')
             logging.debug ('')
@@ -384,29 +439,6 @@ class Archive:
             logging.debug (f'instrument= {self.instrument:s}')
             logging.debug (f'datetime= {self.datetime:s}')
             logging.debug (f'outpath= {self.outpath:s}')
-
-        if ('cookiepath' in kwargs): 
-            self.cookiepath = kwargs.get('cookiepath')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'cookiepath= {self.cookiepath:s}')
-
-        self.format = 'ipac'
-        if ('format' in kwargs): 
-            self.format = kwargs.get('format')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'format= {self.format:s}')
-
-        self.maxrec = '0'
-        if ('maxrec' in kwargs): 
-            self.maxrec = kwargs.get('maxrec')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'maxrec= {self.maxrec:s}')
 
 #
 #    send url to server to construct the select statement
@@ -457,13 +489,30 @@ class Archive:
         cookiepath (string): cookie file path for query the proprietary 
                              KOA data.
         
-	format:  Output format: votable, ascii.ipac, etc.. 
-
         format: votable, ipac, csv, etc..  (default: ipac)
 	
 	maxrec:  maximum records to be returned (default: '0')
         """
    
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
+        
         if self.debug:
             logging.debug ('')
             logging.debug ('')
@@ -490,29 +539,6 @@ class Archive:
             logging.debug (f'instrument=  {self.instrument:s}')
             logging.debug (f'pos=  {self.pos:s}')
             logging.debug (f'outpath= {self.outpath:s}')
-
-#        if ('cookiepath' in kwargs): 
-#            self.cookiepath = kwargs.get('cookiepath')
-
-#        if self.debug:
-#            logging.debug ('')
-#            logging.debug (f'cookiepath= {self.cookiepath:s}')
-
-        self.format = 'ipac'
-        if ('format' in kwargs): 
-            self.format = kwargs.get('format')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'format= {self.format:s}')
-
-        self.maxrec = '0'
-        if ('maxrec' in kwargs): 
-            self.maxrec = kwargs.get('maxrec')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'maxrec= {self.maxrec:s}')
 
 #
 #    send url to server to construct the select statement
@@ -561,6 +587,25 @@ class Archive:
 	         default: 0
         """
    
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
+        
         if self.debug:
             logging.debug ('')
             logging.debug ('')
@@ -593,29 +638,8 @@ class Archive:
             radiusi_str = kwargs.get('radius')
             radius = float(radius_str)
 
-#        if ('cookiepath' in kwargs): 
-#            self.cookiepath = kwargs.get('cookiepath')
-
-#        if self.debug:
-#            logging.debug ('')
-#            logging.debug (f'cookiepath= {self.cookiepath:s}')
-
-        self.format = 'ipac'
-        if ('format' in kwargs): 
-            self.format = kwargs.get('format')
-
         if self.debug:
             logging.debug ('')
-            logging.debug (f'format= {self.format:s}')
-
-        self.maxrec = '0'
-        if ('maxrec' in kwargs): 
-            self.maxrec = kwargs.get('maxrec')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'format= {self.format:s}')
-            logging.debug (f'maxrec= {self.maxrec:s}')
             logging.debug (f'radius= {radius:f}')
 
         coords = None
@@ -696,13 +720,30 @@ class Archive:
         cookiepath (string): cookie file path for query the proprietary 
                              KOA data.
         
-	format:  Output format: votable, ascii.ipac, etc.. 
-        
-	    format: votable, ipac, etc.. (default: votable)
+	    format: output table format: votable, ipac, etc.. (default: votable)
 	    
             maxrec: max number of output records
         """
 
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
+        
         if self.debug:
             logging.debug ('')
             logging.debug ('')
@@ -724,13 +765,13 @@ class Archive:
             for k,v in param.items():
                 logging.debug (f'k, v= {k:s}, {v:s}')
 
-        cookiepath = ''
+        self.cookiepath = ''
         if ('cookiepath' in kwargs): 
-            cookiepath = kwargs.get('cookiepath')
+            self.cookiepath = kwargs.get('cookiepath')
 
         if self.debug:
             logging.debug ('')
-            logging.debug (f'cookiepath= {cookiepath:s}')
+            logging.debug (f'cookiepath= {self.cookiepath:s}')
 
         self.format ='ipac'
         if ('format' in kwargs): 
@@ -745,8 +786,34 @@ class Archive:
             logging.debug (f'format= {self.format:s}')
             logging.debug (f'maxrec= {self.maxrec:s}')
 
-
         data = urllib.parse.urlencode (param)
+
+#
+#    retrieve baseurl from conf class;
+#
+#    during dev or test, baseurl will be a keyword input
+#
+        self.baseurl = conf.server
+
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+
+#
+#    urls for nph-tap.py, nph-koaLogin, nph-makeQyery, 
+#    nph-getKoa, and nph-getCaliblist
+#
+        self.tap_url = self.baseurl + '/TAP/nph-tap.py'
+        self.makequery_url = self.baseurl + '/KoaAPI/nph-makeQuery?'
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'tap_url= [{self.tap_url:s}]')
+            logging.debug (f'makequery_url= [{self.makequery_url:s}]')
+
 
         url = self.makequery_url + data            
 
@@ -781,40 +848,31 @@ class Archive:
 #    send tap query
 #
         self.tap = None
-        if (len(cookiepath) > 0):
-
-            if (self.debug):
-                self.tap = KoaTap (self.tap_url, \
-                    format=self.format, \
-                    maxrec=self.maxrec, \
-                    cookiefile=cookiepath, \
-                    debug=1)
-            else:
-                self.tap = KoaTap (self.tap_url, \
-                    format=self.format, \
-                    maxrec=self.maxrec, \
-                    cookiefile=cookiepath)
-
-            if self.debug:
-                logging.debug('')
-                logging.debug('koaTap initialized with cookie')
-
-        else:    
-            if (self.debug):
-                self.tap = KoaTap (self.tap_url, \
-	            format=self.format, \
-                    maxrec=self.maxrec, \
-                    debug=1)
-            else: 
-                self.tap = KoaTap (self.tap_url, \
-	            format=self.format, \
-		    maxrec=self.maxrec)
+        if (len(self.cookiepath) > 0):
+            
+            self.tap = KoaTap (self.tap_url, \
+                format=self.format, \
+                maxrec=self.maxrec, \
+                cookiefile=self.cookiepath, \
+		debug=1)
         
             if self.debug:
-                logging.debug('')
-                logging.debug('koaTap initialized without cookie')
-
+                logging.debug ('')
+                logging.debug ('xxx0')
+                logging.debug (f'cookiepath= {self.cookiepath:s}')
+       
+        else: 
+            self.tap = KoaTap (self.tap_url, \
+                format=self.format, \
+                maxrec=self.maxrec)
+        
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('xxx1: no cookiepath')
+       
         if self.debug:
+            logging.debug('')
+            logging.debug('koaTap initialized')
             logging.debug('')
             logging.debug(f'query= {query:s}')
             logging.debug('call self.tap.send_async')
@@ -871,6 +929,25 @@ class Archive:
 	             default: 0
         """
    
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
+        
         if self.debug:
             logging.debug ('')
             logging.debug ('')
@@ -893,13 +970,13 @@ class Archive:
             logging.debug (f'query= {self.query:s}')
             logging.debug (f'outpath= {self.outpath:s}')
        
-        cookiepath = '' 
+        self.cookiepath = '' 
         if ('cookiepath' in kwargs): 
-            cookiepath = kwargs.get('cookiepath')
+            self.cookiepath = kwargs.get('cookiepath')
 
         if self.debug:
             logging.debug ('')
-            logging.debug (f'cookiepath= {cookiepath:s}')
+            logging.debug (f'cookiepath= {self.cookiepath:s}')
 
         self.format = 'ipac'
         if ('format' in kwargs): 
@@ -914,26 +991,42 @@ class Archive:
             logging.debug (f'format= {self.format:s}')
             logging.debug (f'maxrec= {self.maxrec:s}')
 
+#
+#    retrieve baseurl from conf class;
+#
+        self.baseurl = conf.server
+
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+
+#
+#    urls for nph-tap.py
+#
+        self.tap_url = self.baseurl + '/TAP/nph-tap.py'
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'tap_url= [{self.tap_url:s}]')
 
 #
 #    send tap query
 #
         self.tap = None
-        if (len(cookiepath) > 0):
-            self.tap = KoaTap (self.tap_url, \
-	        format=self.format, \
-		maxrec=self.maxrec, \
-		cookiefile=cookiepath, \
-		debug=1)
-        else:    
-            if self.debug:
-                logging.debug('')
-                logging.debug('initializing KoaTap')
+
+        if (len(self.cookiepath) > 0):
             
             self.tap = KoaTap (self.tap_url, \
-	        format=self.format, \
-		maxrec=self.maxrec, \
-		debug=1)
+                format=self.format, \
+                maxrec=self.maxrec, \
+                cookiefile=self.cookiepath)
+        else: 
+            self.tap = KoaTap (self.tap_url, \
+                format=self.format, \
+                maxrec=self.maxrec)
         
         if self.debug:
             logging.debug('')
@@ -957,10 +1050,6 @@ class Archive:
 
         indx = retstr_lower.find ('error')
     
-#        if self.debug:
-#            logging.debug ('')
-#            logging.debug (f'indx= {indx:d}')
-
         if (indx >= 0):
             print (retstr)
             sys.exit()
@@ -1016,6 +1105,25 @@ class Archive:
         calibfile: whether to download the associated calibration files (0/1);
                    default is 0.
         """
+        
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
     
         if self.debug:
             logging.debug ('')
@@ -1270,6 +1378,30 @@ class Archive:
                 logging.debug (f'filehand= {filehand:s}')
                 logging.debug (f'instrument= {instrument:s}')
 
+
+#
+#    retrieve baseurl from conf class;
+#
+        self.baseurl = conf.server
+
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+
+#
+#    urls for nph-getKoa, and nph-getCaliblist
+#
+        self.getkoa_url = self.baseurl + '/getKOA/nph-getKOA?return_mode=json&'
+        self.caliblist_url = self.baseurl+ '/KoaAPI/nph-getCaliblist?'
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'self.getkoa_url= {self.getkoa_url:s}')
+            logging.debug (f'self.caliblist_url= {self.caliblist_url:s}')
+      
 #
 #   get lev0 files
 #
@@ -1394,7 +1526,11 @@ class Archive:
                 
                         self.msg = 'Error downloading files in caliblist [' + \
                             filepath + ']: ' +  str(e)
-                        continue
+                        
+                        if self.debug:
+                            logging.debug ('')
+                            logging.debug (f'errmsg= {self.msg:s}')
+
                 
 
         if self.debug:
@@ -1854,6 +1990,10 @@ class KoaTap:
         if ('cookiefile' in kwargs):
             self.cookiepath = kwargs.get('cookiefile')
 
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'cookiepath= {self.cookiepath:s}')
+
         self.request = 'doQuery'
         if ('request' in kwargs):
             self.request = kwargs.get('request')
@@ -1878,7 +2018,6 @@ class KoaTap:
             logging.debug ('')
             logging.debug (f'url= {self.url:s}')
             logging.debug (f'cookiepath= {self.cookiepath:s}')
-
 
 #
 #    turn on server debug
@@ -1958,7 +2097,6 @@ class KoaTap:
             self.format = kwargs.get('format')
             self.datadict['format'] = self.format              
 
-        
             if self.debug:
                 logging.debug ('')
                 logging.debug (f'format= {self.format:s}')
@@ -1980,17 +2118,9 @@ class KoaTap:
 
             if (len(self.cookiepath) > 0):
         
-                if self.debug:
-                    logging.debug ('')
-                    logging.debug ('xxx1')
-
                 self.response = requests.post (url, data= self.datadict, \
 	            cookies=self.cookiejar, allow_redirects=False)
             else: 
-                if self.debug:
-                    logging.debug ('')
-                    logging.debug ('xxx2')
-
                 self.response = requests.post (url, data= self.datadict, \
 	            allow_redirects=False)
 
@@ -2615,8 +2745,8 @@ class KoaTap:
         return (self.msg) 
 
 
+#class KoaTap:
 
-class KoaTap:
 
     """
     KoaTap class provides client access to KOA's TAP service.   
@@ -2652,7 +2782,7 @@ class KoaTap:
 	              default is no cookiefile
 	debug      -- default is no debug written
     """
-
+    """
     def __init__ (self, url, **kwargs):
 
         self.url = url 
@@ -2673,11 +2803,13 @@ class KoaTap:
         
         self.status = ''
         self.msg = ''
+    """
 
 #
 #    koajob contains async job's status;
 #    resulttbl is the result of sync saved an astropy table 
 #
+    """
         self.koajob = None
         self.astropytbl = None
         
@@ -2717,10 +2849,11 @@ class KoaTap:
             logging.debug (f'url= {self.url:s}')
             logging.debug (f'cookiepath= {self.cookiepath:s}')
 
-
+    """
 #
 #    turn on server debug
 #   
+    """
         pid = os.getpid()
         self.datadict['request'] = self.request              
         self.datadict['lang'] = self.lang              
@@ -2766,7 +2899,6 @@ class KoaTap:
                 raise Exception (self.msg) 
 
         return 
-       
 
     def send_async (self, query, **kwargs):
 
@@ -2786,9 +2918,11 @@ class KoaTap:
 
         self.datadict['query'] = query 
 
+    """       
 #
 #    for async query, there is no maxrec limit
 #
+    """
         self.maxrec = '0'
 
         if ('format' in kwargs):
@@ -2858,16 +2992,16 @@ class KoaTap:
             logging.debug ('self.response.headers: ')
             logging.debug (self.response.headers)
             
-            
-#        print (f'status_code= {self.response.status_code:d}')
            
         if self.debug:
             logging.debug ('')
             logging.debug (f'status_code= {self.response.status_code:d}')
+    """             
             
 #
 #    if status_code != 303: probably error message
 #
+    """
         if (self.response.status_code != 303):
             
             if self.debug:
@@ -2889,9 +3023,11 @@ class KoaTap:
             self.msg = ''
            
             if (self.content_type == 'application/json'):
+    """
 #
 #    error message
 #
+    """
                 if self.debug:
                     logging.debug ('')
                     logging.debug ('self.response:')
@@ -2927,10 +3063,11 @@ class KoaTap:
                 if (self.status == 'error'):
                     self.msg = 'Error: ' + data['msg']
                     return (self.msg)
-
+    """
 #
 #    retrieve statusurl
 #
+    """
         self.statusurl = ''
         if (self.response.status_code == 303):
             self.statusurl = self.response.headers['Location']
@@ -2942,10 +3079,11 @@ class KoaTap:
         if (len(self.statusurl) == 0):
             self.msg = 'Error: failed to retrieve statusurl from re-direct'
             return (self.msg)
-
+    """
 #
 #    create koajob to save status result
 #
+    """
         try:
             if (self.debug):
                 self.koajob = KoaJob (\
@@ -2970,10 +3108,11 @@ class KoaTap:
                 logging.debug (f'exception: e= {str(e):s}')
             
             return (self.msg)    
-        
+    """        
 #
 #    loop until job is complete and download the data
 #
+    """ 
         
         phase = self.koajob.phase
         
@@ -2998,10 +3137,11 @@ class KoaTap:
             logging.debug ('')
             logging.debug ('here0-2')
             logging.debug (f'phase= {phase:s}')
-            
+    """            
 #
 #    phase == 'error'
 #
+    """
         if (phase.lower() == 'error'):
 	   
             self.status = 'error'
@@ -3016,18 +3156,20 @@ class KoaTap:
         if self.debug:
             logging.debug ('')
             logging.debug ('here2: phase is completed')
-            
+    """            
 #
 #   phase == 'completed' 
 #
+    """
         self.resulturl = self.koajob.resulturl
         if self.debug:
             logging.debug ('')
             logging.debug (f'resulturl= {self.resulturl:s}')
-
+    """
 #
 #   send resulturl to retrieve result table
 #
+    """
         try:
             self.response_result = requests.get (self.resulturl, stream=True)
         
@@ -3046,10 +3188,11 @@ class KoaTap:
             
             raise Exception (self.msg)    
      
-       
+    """       
 #
 # save table to file
 #
+    """
         if self.debug:
             logging.debug ('')
             logging.debug ('got here')
@@ -3061,12 +3204,13 @@ class KoaTap:
             logging.debug (f'returned save_data: msg= {self.msg:s}')
 
         return (self.msg)
-
+    """
 
 #
 #    outpath is not given: return resulturl
 #
-        """
+
+    """
         if (len(self.outpath) == 0):
            
             self.resulturl = self.koajob.resulturl
@@ -3115,8 +3259,6 @@ class KoaTap:
 
 
         return (self.msg) 
-        """
-
 
     def send_sync (self, query, **kwargs):
        
@@ -3134,10 +3276,11 @@ class KoaTap:
         self.sync_job = 1
         self.async_job = 0
         self.datadict['query'] = query
-    
+    """    
 #
 #    optional parameters: format, maxrec, self.outpath
 #
+    """
         self.maxrec = '0'
 
         if ('format' in kwargs):
@@ -3190,13 +3333,13 @@ class KoaTap:
                 logging.debug (f'exception: e= {str(e):s}')
             
             return (self.msg)
-
+    """
 #
 #    re-direct case not implemented for send_sync
 #
 #	if (self.response.status_code == 303):
 #            self.resulturl = self.response.headers['Location']
-        
+    """        
         self.content_type = self.response.headers['Content-type']
         self.encoding = self.response.encoding
 
@@ -3208,9 +3351,11 @@ class KoaTap:
         self.status = ''
         self.msg = ''
         if (self.content_type == 'application/json'):
+    """
 #
 #    error message
 #
+    """
             try:
                 data = self.response.json()
             except Exception:
@@ -3227,21 +3372,23 @@ class KoaTap:
                 logging.debug ('')
                 logging.debug (f'status= {self.status:s}')
                 logging.debug (f'msg= {self.msg:s}')
-     
+    """     
 #
 # download resulturl and save table to file
 #
+    """
         if self.debug:
             logging.debug ('')
             logging.debug ('send request to get resulturl')
 
-
+    """
 
 
 
 #
 # save table to file
 #
+    """
         if self.debug:
             logging.debug ('')
             logging.debug ('got here')
@@ -3253,11 +3400,12 @@ class KoaTap:
             logging.debug (f'returned save_data: msg= {self.msg:s}')
 
         return (self.msg)
-
+    """
 
 #
 # save data to astropy table
 #
+    """
     def save_data (self, outpath):
 
         if self.debug:
@@ -3307,9 +3455,11 @@ class KoaTap:
                 
             self.msg = 'Result downloaded to file [' + self.outpath + ']'
         else:
+    """
 #
 #    read temp outpath to astropy table
 #
+    """
             if self.debug:
                 logging.debug ('')
                 logging.debug (f'xxx2')
@@ -3329,9 +3479,9 @@ class KoaTap:
                 logging.debug ('tmpfile {fpath:s} deleted')
 
         return (self.msg)
+    """
 
-
-
+    """
     def print_data (self):
 
         if self.debug:
@@ -3340,7 +3490,6 @@ class KoaTap:
 
         try:
 
-            """
             len_table = len (self.astropytbl)
         
             if self.debug:
@@ -3351,7 +3500,6 @@ class KoaTap:
 	    
                 row = self.astropytbl[i]
                 print (row)
-            """
 
             self.astropytbl.pprint()
 
@@ -3360,11 +3508,12 @@ class KoaTap:
             raise Exception (str(e))
 
         return
-
+    """
 
 #
 #    outpath is given: loop until job is complete and download the data
 #
+    """
     def get_data (self, resultpath):
 
         if self.debug:
@@ -3376,9 +3525,11 @@ class KoaTap:
 
 
         if (self.async_job == 0):
+    """
 #
 #    sync data is in astropytbl
 #
+    """
             self.astropytbl.write (resultpath)
 
             if self.debug:
@@ -3403,10 +3554,11 @@ class KoaTap:
                     logging.debug ('')
                     logging.debug (\
                         f'returned koajob.get_phase: phase= {phase:s}')
-
+    """
 #
 #    phase == 'error'
 #
+    """ 
             if (phase.lower() == 'error'):
 	   
                 self.status = 'error'
@@ -3451,7 +3603,7 @@ class KoaTap:
             logging.debug (f'self.msg = {self.msg:s}')
        
         return (self.msg) 
-
+    """
 
 
 
