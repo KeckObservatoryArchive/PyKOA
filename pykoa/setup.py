@@ -9,18 +9,18 @@ with open ("README.md", "r") as fh:
 
 setup(
     name="pykoa",
-    version="0.1.6",
+    version="0.1.7",
     author="Mihseh Kong",
     description="KOA archive access client", 
     long_description = long_description,
-    url="https://github.com/KeckObservatoryArchive/PyKOA/",
+    url="https://github.com/KeckObservatoryArchive/PyKOA/pykoa",
     classifiers=[
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'License :: OSI Approved :: MIT License',
         'Topic :: Scientific/Engineering :: Astronomy'],
-    packages=['pykoa'],
+    packages=['pykoa', 'pykoa/koa'],
     data_files=[],
     install_requires=reqs,
     python_requires='>= 3.6',
