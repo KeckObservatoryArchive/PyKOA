@@ -1151,6 +1151,7 @@ class Archive:
             logging.debug (f'format= {self.format:s}')
             logging.debug (f'outdir= {self.outdir:s}')
 
+        
         cookiepath = ''
         cookiejar = None
         
@@ -1187,7 +1188,9 @@ class Archive:
                     logging.debug ('')
                     logging.debug (f'loadCookie exception: {str(e):s}')
                 pass
-        
+
+#        endif (len(cookiepath) > 0):
+
         fmt_astropy = self.format
         if (self.format == 'tsv'):
             fmt_astropy = 'ascii.tab'
@@ -1216,6 +1219,7 @@ class Archive:
             logging.debug ('self.astropytbl read')
             logging.debug (f'self.len_tbl= {self.len_tbl:d}')
 
+        
         self.colnames = self.astropytbl.colnames
 
         if self.debug:
@@ -1263,6 +1267,7 @@ class Archive:
             logging.debug ('')
             logging.debug (f'calibfile= {calibfile:d}')
 
+
         srow = 0;
         erow = self.len_tbl - 1
 
@@ -1290,6 +1295,7 @@ class Archive:
             logging.debug (f'srow= {srow:d}')
             logging.debug (f'erow= {erow:d}')
      
+
 #
 #    create outdir if it doesn't exist
 #
@@ -1317,6 +1323,30 @@ class Archive:
         if self.debug:
             logging.debug ('')
             logging.debug ('returned os.makedirs') 
+
+
+#
+#    retrieve baseurl from conf class;
+#
+        self.baseurl = conf.server
+
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+
+#
+#    urls for nph-getKoa, and nph-getCaliblist
+#
+        self.getkoa_url = self.baseurl + '/getKOA/nph-getKOA?return_mode=json&'
+        self.caliblist_url = self.baseurl+ '/KoaAPI/nph-getCaliblist?'
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'self.getkoa_url= {self.getkoa_url:s}')
+            logging.debug (f'self.caliblist_url= {self.caliblist_url:s}')
 
 
         instrument = '' 
@@ -1378,35 +1408,10 @@ class Archive:
                 logging.debug (f'filehand= {filehand:s}')
                 logging.debug (f'instrument= {instrument:s}')
 
-
-#
-#    retrieve baseurl from conf class;
-#
-        self.baseurl = conf.server
-
-        if ('server' in kwargs):
-            self.baseurl = kwargs.get ('server')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
-
-#
-#    urls for nph-getKoa, and nph-getCaliblist
-#
-        self.getkoa_url = self.baseurl + '/getKOA/nph-getKOA?return_mode=json&'
-        self.caliblist_url = self.baseurl+ '/KoaAPI/nph-getCaliblist?'
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'self.getkoa_url= {self.getkoa_url:s}')
-            logging.debug (f'self.caliblist_url= {self.caliblist_url:s}')
-      
 #
 #   get lev0 files
 #
             url = self.getkoa_url + 'filehand=' + filehand
-                
             filepath = self.outdir + '/' + koaid
                 
             if self.debug:
@@ -1419,12 +1424,6 @@ class Archive:
 #
             isExist = os.path.exists (filepath)
 	    
-            if self.debug:
-                logging.debug ('')
-                logging.debug ('isExist:')
-                logging.debug (isExist)
-
-
             if (not isExist):
 
                 try:
@@ -1485,19 +1484,19 @@ class Archive:
                         logging.debug ('')
                         logging.debug (f'caliblist url= {url:s}')
 
-                    try:
-                        self.__submit_request (url, caliblist, cookiejar)
-                        self.ncaliblist = self.ncaliblist + 1
+                try:
+                    self.__submit_request (url, caliblist, cookiejar)
+                    self.ncaliblist = self.ncaliblist + 1
 
-                        self.msg =  'Returned file written to: ' + caliblist   
+                    self.msg =  'Returned file written to: ' + caliblist   
            
-                        if self.debug:
-                            logging.debug ('')
-                            logging.debug ('returned __submit_request')
-                            logging.debug (f'self.msg= {self.msg:s}')
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug ('returned __submit_request')
+                        logging.debug (f'self.msg= {self.msg:s}')
             
-                    except Exception as e:
-                        print (f'File [{caliblist:s}] download: {str(e):s}')
+                except Exception as e:
+                    print (f'File [{caliblist:s}] download: {str(e):s}')
 
 #
 #    check again after caliblist is successfully downloaded, if caliblist 
@@ -1531,7 +1530,11 @@ class Archive:
                             logging.debug ('')
                             logging.debug (f'errmsg= {self.msg:s}')
 
-                
+#                endif (download_calibfiles):
+#            endif (calibfile == 1):
+
+#        endfor l in range (srow, erow+1)
+
 
         if self.debug:
             logging.debug ('')
@@ -1542,8 +1545,10 @@ class Archive:
                 f'{self.ndnloaded_calib:d} calibration files downloaded.')
 
         print (f'A total of new {self.ndnloaded:d} FITS files downloaded.')
-        print (f'{self.ncaliblist:d} new calibration list downloaded.')
-        print (f'{self.ndnloaded_calib:d} new calibration FITS files downloaded.')
+        
+        if (calibfile == 1):
+            print (f'{self.ncaliblist:d} new calibration list downloaded.')
+            print (f'{self.ndnloaded_calib:d} new calibration FITS files downloaded.')
 
         return
 
