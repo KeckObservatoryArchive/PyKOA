@@ -374,13 +374,13 @@ class Archive:
         instruments: e.g. HIRES, NIRC2, etc...
 
         time: a datetime string in the format of datetime1/datetime2 where 
-            datetime format of is 'yyyy-mm-dd hh:mm:ss.ss'
+            datetime format of is 'yyyy-mm-dd hh:mm:ss'
 
         outpath: the full output filepath of the returned metadata table
     
         e.g. 
             instrument = 'hires',
-            datetime = '2018-03-16 06:10:55.00/2018-03-18 00:00:00.00' 
+            datetime = '2018-03-16 06:10:55/2018-03-18 00:00:00' 
 
         Optional inputs:
 	----------------
@@ -476,7 +476,7 @@ class Archive:
 	3.  box ra dec width height;
 	
 	All ra dec in J2000 coordinate.
-            datetime format of is 'yyyy-mm-dd hh:mm:ss.ss'
+            datetime format of is 'yyyy-mm-dd hh:mm:ss'
              
         e.g. 
             instrument = 'hires',
