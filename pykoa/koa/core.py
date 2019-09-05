@@ -65,7 +65,7 @@ class Archive:
 
 
     def __init__(self, **kwargs):
-    
+   
         """
         'init' method initialize the class with optional debugfile flag
 
@@ -91,7 +91,6 @@ class Archive:
         if self.debug:
             logging.debug ('')
             logging.debug ('Enter koa.init:')
-
 
 #
 #    retrieve baseurl from conf class;
@@ -286,12 +285,12 @@ class Archive:
         except urllib.error.URLError as e:
         
             status = 'error'
-            msg = 'URLError= ' + e.reason    
+            msg = 'URLError= ' + str(e)    
         
         except urllib.error.HTTPError as e:
             
             status = 'error'
-            msg =  'HTTPError= ' +  e.reason 
+            msg =  'HTTPError= ' +  str(e) 
             
         except Exception:
            
@@ -853,8 +852,10 @@ class Archive:
             self.tap = KoaTap (self.tap_url, \
                 format=self.format, \
                 maxrec=self.maxrec, \
-                cookiefile=self.cookiepath, \
-		debug=1)
+                cookiefile=self.cookiepath)
+
+#                cookiefile=self.cookiepath, \
+#		debug=1)
         
             if self.debug:
                 logging.debug ('')
@@ -1022,7 +1023,8 @@ class Archive:
             self.tap = KoaTap (self.tap_url, \
                 format=self.format, \
                 maxrec=self.maxrec, \
-                cookiefile=self.cookiepath)
+                cookiefile=self.cookiepath, \
+		debug=1)
         else: 
             self.tap = KoaTap (self.tap_url, \
                 format=self.format, \
@@ -1036,10 +1038,16 @@ class Archive:
 
         print ('submitting request...')
 
+#        if (len(self.outpath) > 0):
+#            retstr = self.tap.send_async (query, outpath=self.outpath, debug=1)
+#        else:
+#            retstr = self.tap.send_async (query, debug=1)
+
         if (len(self.outpath) > 0):
             retstr = self.tap.send_async (query, outpath=self.outpath)
         else:
             retstr = self.tap.send_async (query)
+        
         
         if self.debug:
             logging.debug ('')
@@ -1189,7 +1197,7 @@ class Archive:
                     logging.debug (f'loadCookie exception: {str(e):s}')
                 pass
 
-#        endif (len(cookiepath) > 0):
+#        endif (cookiepath)
 
         fmt_astropy = self.format
         if (self.format == 'tsv'):
@@ -1545,11 +1553,10 @@ class Archive:
                 f'{self.ndnloaded_calib:d} calibration files downloaded.')
 
         print (f'A total of new {self.ndnloaded:d} FITS files downloaded.')
-        
+ 
         if (calibfile == 1):
             print (f'{self.ncaliblist:d} new calibration list downloaded.')
             print (f'{self.ndnloaded_calib:d} new calibration FITS files downloaded.')
-
         return
 
 
@@ -1919,9 +1926,8 @@ class Archive:
                 logging.debug (f'msg= {msg:s}')
      
         return (response.text)
-
 #
-#    end class Archive
+#   end class Archive
 #
    
 class KoaTap:
@@ -2078,7 +2084,7 @@ class KoaTap:
        
 
     def send_async (self, query, **kwargs):
-
+        
         if self.debug:
             logging.debug ('')
             logging.debug ('Enter send_async:')
@@ -2751,11 +2757,9 @@ class KoaTap:
             logging.debug (f'self.msg = {self.msg:s}')
        
         return (self.msg) 
-
 #
-# end class KoaTap:
+#    end class KoaTap
 #
-
 
 class KoaJob:
 
