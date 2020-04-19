@@ -851,28 +851,33 @@ class Archive:
         self.tap = None
         if (len(self.cookiepath) > 0):
             
-            self.tap = KoaTap (self.tap_url, \
-                format=self.format, \
-                maxrec=self.maxrec, \
-                cookiefile=self.cookiepath)
-
-#                cookiefile=self.cookiepath, \
-#		debug=1)
-        
             if self.debug:
                 logging.debug ('')
                 logging.debug ('xxx0')
                 logging.debug (f'cookiepath= {self.cookiepath:s}')
        
-        else: 
-            self.tap = KoaTap (self.tap_url, \
-                format=self.format, \
-                maxrec=self.maxrec)
-        
             if self.debug:
-                logging.debug ('')
-                logging.debug ('xxx1: no cookiepath')
-       
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+                    cookiefile=self.cookiepath, \
+	            debug=1)
+            else:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+                    cookiefile=self.cookiepath)
+        else: 
+            if self.debug:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+	            debug=1)
+            else:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec)
+        
         if self.debug:
             logging.debug('')
             logging.debug('koaTap initialized')
@@ -1021,16 +1026,28 @@ class Archive:
         self.tap = None
 
         if (len(self.cookiepath) > 0):
-            
-            self.tap = KoaTap (self.tap_url, \
-                format=self.format, \
-                maxrec=self.maxrec, \
-                cookiefile=self.cookiepath, \
-		debug=1)
+           
+            if self.debug:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+                    cookiefile=self.cookiepath, \
+	            debug=1)
+            else:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+                    cookiefile=self.cookiepath)
         else: 
-            self.tap = KoaTap (self.tap_url, \
-                format=self.format, \
-                maxrec=self.maxrec)
+            if self.debug:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+	            debug=1)
+            else:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec)
         
         if self.debug:
             logging.debug('')
@@ -1040,16 +1057,17 @@ class Archive:
 
         print ('submitting request...')
 
-#        if (len(self.outpath) > 0):
-#            retstr = self.tap.send_async (query, outpath=self.outpath, debug=1)
-#        else:
-#            retstr = self.tap.send_async (query, debug=1)
-
-        if (len(self.outpath) > 0):
-            retstr = self.tap.send_async (query, outpath=self.outpath)
+        if self.debug:
+            if (len(self.outpath) > 0):
+                retstr = self.tap.send_async (query, outpath=self.outpath, \
+                    debug=1)
+            else:
+                retstr = self.tap.send_async (query, debug=1)
         else:
-            retstr = self.tap.send_async (query)
-        
+            if (len(self.outpath) > 0):
+                retstr = self.tap.send_async (query, outpath=self.outpath)
+            else:
+                retstr = self.tap.send_async (query)
         
         if self.debug:
             logging.debug ('')
@@ -2051,7 +2069,7 @@ class KoaTap:
 
             if self.debug:
                 logging.debug ('')
-                logging.debug (f'key= {key:s} val= {self.datadict[key]:s}')
+                logging.debug (f'key= {key:s} val= {str(self.datadict[key]):s}')
     
         
         self.cookiejar = http.cookiejar.MozillaCookieJar (self.cookiepath)

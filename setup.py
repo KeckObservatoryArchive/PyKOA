@@ -9,11 +9,11 @@ with open ("README.md", "r") as fh:
 
 setup(
     name="pykoa",
-    version="0.2",
+    version="0.2.1",
     author="Mihseh Kong",
     description="KOA archive access client", 
     long_description = long_description,
-    url="https://github.com/KeckObservarotyArchive/PyKOA",
+    url="https://github.com/KeckObservatoryArchive/PyKOA",
     classifiers=[
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3.6',
