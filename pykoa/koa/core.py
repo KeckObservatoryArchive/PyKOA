@@ -14,13 +14,15 @@ import requests
 import urllib 
 import http.cookiejar
 
-from astropy.coordinates import name_resolve
+#from astropy.coordinates import name_resolve
 from astropy.table import Table, Column
 
 from . import conf
 
 class Archive:
-
+#
+#{ Archive class
+#
     """
     'Archive' class provides KOA archive access functions for searching the
     Keck On-line Archive (KOA) data via TAP interface.  
@@ -65,7 +67,9 @@ class Archive:
 
 
     def __init__(self, **kwargs):
-   
+#
+#{ Archive.init
+#
         """
         'init' method initialize the class with optional debugfile flag
 
@@ -124,11 +128,15 @@ class Archive:
             logging.debug (f'self.caliblist_url= {self.caliblist_url:s}')
       
         return
-
+#
+#} end Archive.init
+#
 
 
     def login (self, cookiepath, **kwargs):
-
+#
+#{ Archive.login
+#
         """
         auth method validates a user has a valid KOA account; it takes two
         'keyword' arguments: userid and password. If the inputs are not 
@@ -361,9 +369,15 @@ class Archive:
 
         print (msg)
         return;
+#
+#} end Archive.login
+#
 
 
     def query_datetime (self, instrument, datetime, outpath, **kwargs):
+#
+#{ Archive.query_datetime
+#
         
         """
         'query_datetime' method search KOA data by 'datetime' range
@@ -453,10 +467,15 @@ class Archive:
         self.query_criteria (param, outpath, **kwargs)
 
         return
-
-
+#
+#} end Archive.query_datetime
+#
+        
 
     def query_position (self, instrument, pos, outpath, **kwargs):
+#
+#{ Archive.query_position
+#
         
         """
         'query_position' method search KOA data by 'position' 
@@ -550,9 +569,15 @@ class Archive:
         self.query_criteria (param, outpath, **kwargs)
 
         return
-
+#
+#} end Archive.query_position
+#
+        
 
     def query_object (self, instrument, object, outpath, **kwargs):
+#
+#{ Archive.query_object
+#
         
         """
         'query_object_name' method search KOA data by 'object name' 
@@ -642,6 +667,7 @@ class Archive:
             logging.debug ('')
             logging.debug (f'radius= {radius:f}')
 
+        """
         coords = None
         try:
             print (f'resolving object name')
@@ -659,7 +685,7 @@ class Archive:
 
         ra = coords.ra.value
         dec = coords.dec.value
-
+        
         if self.debug:
             logging.debug ('')
             logging.debug (f'ra= {ra:f}')
@@ -668,11 +694,60 @@ class Archive:
         self.pos = 'circle ' + str(ra) + ' ' + str(dec) \
             + ' ' + str(radius)
 	
+        """
+
+        lookup = None
+        try:
+            if self.debug:
+                lookup = objLookup (object, debug=1)
+            else:
+                lookup = objLookup (object)
+        
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('objLookup run successful and returned')
+        
+        except Exception as e:
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'objLookup error: {str(e):s}')
+            
+            print (str(e))
+            return 
+
+        if (lookup.status == 'error'):
+            
+            self.msg = 'Input object [' + object + '] lookup error: ' + \
+                lookup.msg
+            
+            print (self.msg)
+            return
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'source= {lookup.source:s}')
+            logging.debug (f'objname= {lookup.objname:s}')
+            logging.debug (f'objtype= {lookup.objtype:s}')
+            logging.debug (f'objdesc= {lookup.objdesc:s}')
+            logging.debug (f'parsename= {lookup.parsename:s}')
+            logging.debug (f'ra2000= {lookup.ra2000:s}')
+            logging.debug (f'dec2000= {lookup.dec2000:s}')
+            logging.debug (f'cra2000= {lookup.cra2000:s}')
+            logging.debug (f'cdec2000= {lookup.cdec2000:s}')
+
+       
+        ra2000 = lookup.ra2000
+        dec2000 = lookup.dec2000
+
+        self.pos = 'circle ' + ra2000 + ' ' + dec2000 + ' ' + str(radius)
+	
         if self.debug:
             logging.debug ('')
             logging.debug (f'pos= {self.pos:s}')
        
-        print (f'object name resolved: ra= {ra:f}, dec={dec:f}')
+        print (f'object name resolved: ra2000= {ra2000:s}, de2000c={dec2000:s}')
+ 
  
 #
 #    send url to server to construct the select statement
@@ -685,9 +760,15 @@ class Archive:
         self.query_criteria (param, outpath, **kwargs)
 
         return
-
+#
+#} end  Archive.query_object
+#
+        
     
     def query_criteria (self, param, outpath, **kwargs):
+#
+#{ Archive.query_criteria
+#
         
         """
         'query_criteria' method allows the search of KOA data by multiple
@@ -911,9 +992,16 @@ class Archive:
 #
         print (retstr)
         return
+#
+#} end Archive.query_criteria
+#
+        
 
     
     def query_adql (self, query, outpath, **kwargs):
+#
+#{ Archive.query_adql
+#
        
         """
         'query_adql' method receives a qualified ADQL query string from
@@ -1087,9 +1175,16 @@ class Archive:
 #
         print (retstr)
         return
+#
+#} end Archive.query_adql
+#
 
 
     def print_data (self):
+#
+#{ Archive.print_date
+#
+
 
         if self.debug:
             logging.debug ('')
@@ -1103,9 +1198,15 @@ class Archive:
             print (msg)
         
         return
+#
+#} end Archive.print_date
+#
 
 
     def download (self, metapath, format, outdir, **kwargs):
+#
+#{ Archive.download
+#
     
         """
         The download method allows users to download FITS files (and/or) 
@@ -1578,11 +1679,16 @@ class Archive:
             print (f'{self.ncaliblist:d} new calibration list downloaded.')
             print (f'{self.ndnloaded_calib:d} new calibration FITS files downloaded.')
         return
-
-
+#
+#} end Archive.download
+#
+    
 
     def __download_calibfiles (self, listpath, cookiejar):
-
+#
+#{ Archive.__download_calibfiles
+#
+    
         if self.debug:
             logging.debug ('')
             logging.debug (f'Enter __download_calibfiles: {listpath:s}')
@@ -1690,9 +1796,15 @@ class Archive:
             logging.debug (f'{self.ndnloaded:d} files downloaded.')
 
         return (ndnloaded)
-
+#
+#} end  Archive.__download_calibfiles
+#
+    
 
     def __submit_request(self, url, filepath, cookiejar):
+#
+#{ Archive.__submit_request
+#
 
         if self.debug:
             logging.debug ('')
@@ -1873,9 +1985,15 @@ class Archive:
             return
 
         return
+#
+#} end Archive.__submit_request
+#
                        
 
     def __make_query (self, url):
+#
+#{ Archive.__make_query
+#
        
         if self.debug:
             logging.debug ('')
@@ -1947,10 +2065,271 @@ class Archive:
      
         return (response.text)
 #
-#   end class Archive
+#}  end Archive.__make_query
 #
-   
+
+#
+#}  end class Archive
+#
+ 
+
+class objLookup:
+#
+#{ objLookup class
+#
+    """
+    objLookup wraps ExoPlanet's web name resolver into a python class; 
+    the exoLookup checks the exoplanet archive database and if that fails 
+    it checks with the Sesame web service at CDS.  Sesame checks the CDS
+    database and if that fails it checks NED.  So this class covers
+    SIMBAD, NED, and ExoPlanet search.
+
+    Required input:
+
+        object (char):  object name to be resolved
+    """
+
+
+    lookupurl = 'https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?'
+    msg = ''
+    status = ''
+
+    url = ''
+    response = None 
+
+    source = ''
+    input = ''
+    objname = ''
+    objtype = ''
+    parsename= ''
+    objdesc = ''
+    ra2000= ''
+    dec2000 = ''
+    cra2000 = ''
+    cdec2000 = ''
+
+    debug = 0
+
+    def __init__ (self, object, **kwargs):
+#
+#{ objLookup.init
+#
+
+        self.object = object
+
+        if ('debug' in kwargs):
+            self.debug = kwargs['debug']
+
+        self.url = self.lookupurl + 'location=' + self.object
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'url={self.url:s}')
+
+
+        self.response = None 
+        try:
+            self.response = requests.get (self.url, stream=True)
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'response:')
+                logging.debug (self.response)
+
+        except Exception as e:
+            self.msg = f'submit request exception: {str(e):s}'
+            raise Exception (self.msg)
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (
+                f'response.statu_code= {self.response.status_code:d}')
+
+            logging.debug ('response.headers:')
+            logging.debug (self.response.headers)
+
+            logging.debug ('response.text:')
+            logging.debug (self.response.text)
+
+
+        content_type = ''
+        try:
+            content_type = self.response.headers['Content-type']
+        
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'content_type= {content_type:s}')
+
+        except Exception as e:
+            self.msg = f'extract content_type exception: {str(e):s}'
+            raise Exception (self.msg)
+
+
+        jsondata = None
+        try:
+            jsondata = json.loads (self.response.text)
+
+        except Exception as e:
+            self.msg = f'load jsondata exception: {str(e):s}'
+            raise Exception (self.msg)
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('jsondata:')
+            logging.debug (jsondata)
+
+        
+        self.status = ''
+        try:
+            self.status = jsondata['stat']
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'self.status= {self.status:s}')
+
+        except Exception as e:
+
+            self.msg = f'extract stat exception: {str(e):s}'
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'self.msg= {self.msg:s}')
+            
+            raise Exception (self.msg)
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'got here: status= {self.status:s}')
+       
+    
+        if (self.status.lower() == 'ok'):
+#
+#{  objLookup OK, extract parameters
+        
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('xxx1')
+       
+            try:
+                self.source = jsondata['source']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract source exception: {str(e):s}')
+    
+            try:
+                self.objname = jsondata['objname']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract objname exception: {str(e):s}')
+                
+            try:
+                self.objtype = jsondata['objtype']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract objtype exception: {str(e):s}')
+                
+            try:
+                self.objdesc = jsondata['objdesc']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract objdesc exception: {str(e):s}')
+                
+            try:
+                self.parsename = jsondata['parsename']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract parsename exception: {str(e):s}')
+                
+            try:
+                self.ra2000 = jsondata['ra2000']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract ra2000 exception: {str(e):s}')
+                
+            try:
+                self.dec2000 = jsondata['dec2000']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract dec2000 exception: {str(e):s}')
+                
+            try:
+                self.cra2000 = jsondata['cra2000']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract cra2000 exception: {str(e):s}')
+                
+            try:
+                self.cdec2000 = jsondata['cdec2000']
+            except Exception as e:
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'extract cdec20000 exception: {str(e):s}')
+                
+            if self.debug:
+                logging.debug ('')
+                
+                logging.debug (f'dec2000= {self.dec2000:s}')
+                logging.debug (f'source= {self.source:s}')
+                logging.debug (f'objname= {self.objname:s}')
+                logging.debug (f'objtype= {self.objtype:s}')
+                logging.debug (f'objdesc= {self.objdesc:s}')
+                logging.debug (f'parsename= {self.parsename:s}')
+                logging.debug (f'ra2000= {self.ra2000:s}')
+                logging.debug (f'dec2000= {self.dec2000:s}')
+                logging.debug (f'cra2000= {self.cra2000:s}')
+                logging.debug (f'cdec2000= {self.cdec2000:s}')
+
+#
+#}  end objLookup OK, extract parameters
+#
+        else:
+#
+#{  objLookup Error, extract errmsg
+#
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('xxx2')
+       
+            self.status = 'error'
+            try:
+                self.msg = jsondata['msg']
+                
+                if self.debug:
+                    logging.debug ('')
+                    logging.debug (f'errmsg= {self.msg:s}')
+        
+            except Exception as e:
+
+                self.msg = f'extract msg exception: {str(e):s}'
+                raise Exception (self.msg)
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('got here3')
+        
+#
+#}  end extract errmsg
+#
+        return
+#
+#} end objLookup.init
+#
+#
+#} end objLookup class
+#
+
+
+
 class KoaTap:
+#
+#{ KoaTap class
+#
 
     """
     KoaTap class provides client access to KOA's TAP service.   
@@ -1988,6 +2367,9 @@ class KoaTap:
     """
 
     def __init__ (self, url, **kwargs):
+#
+#{ KoaTap.init
+#
 
         self.url = url 
         self.cookiename = ''
@@ -2103,9 +2485,15 @@ class KoaTap:
                 raise Exception (self.msg) 
 
         return 
+#
+#} end KoaTap.init
+#
        
 
     def send_async (self, query, **kwargs):
+#
+#{ KoaTap.send_async
+#
        
         debug = 0
 
@@ -2443,9 +2831,15 @@ class KoaTap:
 
         return (self.msg) 
         """
+#
+#} end KoaTap.send_async
+#
 
 
     def send_sync (self, query, **kwargs):
+#
+#{ KoaTap.send_sync
+#
       
         debug = 0
 
@@ -2582,12 +2976,18 @@ class KoaTap:
             logging.debug (f'returned save_data: msg= {self.msg:s}')
 
         return (self.msg)
+#
+#} end KoaTap.send_sync
+#
 
 
 #
 # save data to astropy table
 #
     def save_data (self, outpath):
+#
+#{ KoaTap.save_date
+#
 
         debug = 1
 
@@ -2660,10 +3060,15 @@ class KoaTap:
                 logging.debug ('tmpfile {fpath:s} deleted')
 
         return (self.msg)
-
+#
+#} end KoaTap.save_date
+#
 
 
     def print_data (self):
+#
+#{ KoaTap.print_date
+#
 
         debug = 1
 
@@ -2693,12 +3098,19 @@ class KoaTap:
             raise Exception (str(e))
 
         return
+#
+#} end KoaTap.print_data
+#
+
 
 
 #
 #    outpath is given: loop until job is complete and download the data
 #
     def get_data (self, resultpath):
+#
+#{ KoaTap.get_data
+#
 
         debug = 1
         
@@ -2787,10 +3199,17 @@ class KoaTap:
        
         return (self.msg) 
 #
-#    end class KoaTap
+#} end KoaTap.get_data
+#
+
+#
+#} end class KoaTap
 #
 
 class KoaJob:
+#
+#{ class KoaJob
+#
 
     """
     KoaJob class is used internally by KoaTap class to store the job 
@@ -2798,6 +3217,9 @@ class KoaJob:
     """
 
     def __init__ (self, statusurl, **kwargs):
+#
+#{ KoaJob.init
+#
 
         self.debug = 0 
         
@@ -2855,10 +3277,15 @@ class KoaJob:
             logging.debug ('done KoaJob.init:')
 
         return     
+#
+#} end KoaJob.init
+#
 
-    
    
     def get_status (self):
+#
+#{ KoaJob.get_status
+#
 
         if self.debug:
             logging.debug ('')
@@ -2888,9 +3315,15 @@ class KoaJob:
                 raise Exception (self.msg)   
 
         return (self.statusstruct)
+#
+#} end KoaJob.get_status
+#
 
 
     def get_resulturl (self):
+#
+#{ KoaJob.get_resulturl
+#
 
         if self.debug:
             logging.debug ('')
@@ -2920,10 +3353,15 @@ class KoaJob:
                 raise Exception (self.msg)   
 
         return (self.resulturl)
-
+#
+#} end KoaJob.get_resulturl
+#
 
 
     def get_result (self, outpath):
+#
+#{ KoaJob.get_result
+#
 
         if self.debug:
             logging.debug ('')
@@ -3015,9 +3453,15 @@ class KoaJob:
             logging.debug ('done writing result to file')
             
         return        
+#
+#} end KoaJob.get_result
+#
 
     
     def get_parameters (self):
+#
+#{ KoaJob.get_parameters
+#
 
         if self.debug:
             logging.debug ('')
@@ -3026,9 +3470,16 @@ class KoaJob:
             logging.debug (self.parameters)
 
         return (self.parameters)
+#
+#} end KoaJob.get_parameters
+#
     
 
     def get_phase (self):
+#
+#{ KoaJob.get_phase
+#
+
 
         if self.debug:
             logging.debug ('')
@@ -3063,10 +3514,15 @@ class KoaJob:
                 logging.debug (f'phase= {self.phase:s}')
 
         return (self.phase)
-    
+#
+#} end KoaJob.get_phase
+#
     
     
     def get_jobid (self):
+#
+#{ KoaJob.get_jobid
+#
 
         if self.debug:
             logging.debug ('')
@@ -3080,9 +3536,14 @@ class KoaJob:
             logging.debug (f'jobid= {self.jobid:s}')
 
         return (self.jobid)
-    
+#
+#} end KoaJob.get_jobid
+#
     
     def get_processid (self):
+#
+#{ KoaJob.get_processid
+#
 
         if self.debug:
             logging.debug ('')
@@ -3096,6 +3557,10 @@ class KoaJob:
             logging.debug (f'processid= {self.processid:s}')
 
         return (self.processid)
+#
+#} end KoaJob.get_processid
+#
+
     
     """ 
     def get_ownerid (self):
@@ -3106,6 +3571,9 @@ class KoaJob:
     """
 
     def get_starttime (self):
+#
+#{ KoaJob.get_starttime
+#
 
         if self.debug:
             logging.debug ('')
@@ -3119,9 +3587,15 @@ class KoaJob:
             logging.debug (f'starttime= {self.starttime:s}')
 
         return (self.starttime)
-    
+#
+#} end KoaJob.get_starttime
+#
+
 
     def get_endtime (self):
+#
+#{ KoaJob.get_endtime
+#
 
         if self.debug:
             logging.debug ('')
@@ -3156,10 +3630,15 @@ class KoaJob:
             logging.debug (f'endtime= {self.endtime:s}')
 
         return (self.endtime)
-    
+#
+#} end KoaJob.get_endtime
+#
 
 
     def get_executionduration (self):
+#
+#{ KoaJob.get_executionduration
+#
 
         if self.debug:
             logging.debug ('')
@@ -3195,9 +3674,16 @@ class KoaJob:
             logging.debug (f'executionduration= {self.executionduration:s}')
 
         return (self.executionduration)
+#
+#} KoaJob.get_executionduration
+#
 
 
     def get_destruction (self):
+#
+#{ KoaJob.get_destruction
+#
+
 
         if self.debug:
             logging.debug ('')
@@ -3232,9 +3718,15 @@ class KoaJob:
             logging.debug (f'destruction= {self.destruction:s}')
 
         return (self.destruction)
+#
+#} end KoaJob.get_destruction
+#
     
    
     def get_errorsummary (self):
+#
+#{ KoaJob.get_errorsummary
+#
 
         if self.debug:
             logging.debug ('')
@@ -3292,9 +3784,15 @@ class KoaJob:
                 logging.debug (f'errorsummary= {self.errorsummary:s}')
 
             return (self.errorsummary)
+#
+#} end KoaJob.get_errorsummary
+#
     
     
     def __get_statusjob (self):
+#
+#{ KoaJob.__get_statusjob
+#
 
         if self.debug:
             logging.debug ('')
@@ -3527,6 +4025,13 @@ class KoaJob:
             logging.debug (f'self.resulturl: {self.resulturl:s}')
 
         return
+#
+#} end KoaJob.__get_statusjob
+#
+
+#
+#} end KoaJob class
+#
 
 
 Koa = Archive()
