@@ -78,7 +78,7 @@ class Archive:
         debugfile: a file path for the debug output
  
 	"""
- 
+        
         if ('debugfile' in kwargs):
             
             self.debug = 1
@@ -113,11 +113,11 @@ class Archive:
 #    urls for nph-tap.py, nph-koaLogin, nph-makeQyery, 
 #    nph-getKoa, and nph-getCaliblist
 #
-        self.tap_url = self.baseurl + '/TAP/nph-tap.py'
-        self.login_url = self.baseurl + '/KoaAPI/nph-koaLogin?'
-        self.makequery_url = self.baseurl + '/KoaAPI/nph-makeQuery?'
-        self.getkoa_url = self.baseurl + '/getKOA/nph-getKOA?return_mode=json&'
-        self.caliblist_url = self.baseurl+ '/KoaAPI/nph-getCaliblist?'
+        self.tap_url = self.baseurl + '/TAP'
+        self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
+        self.makequery_url = self.baseurl + 'cgi-bin/KoaAPI/nph-makeQuery?'
+        self.caliblist_url = self.baseurl+ 'cgi-bin/KoaAPI/nph-getCaliblist?'
+        self.getkoa_url = self.baseurl + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
 
         if self.debug:
             logging.debug ('')
@@ -194,12 +194,6 @@ class Archive:
             print ('A cookiepath is required if you wish to login to KOA')
             return
 
-        cookiejar = http.cookiejar.MozillaCookieJar (cookiepath)
-            
-        if self.debug:
-            logging.debug ('')
-            logging.debug ('cookiejar initialized')
-       
         userid= ''
         password = ''
         if ('userid' in kwargs):
@@ -236,7 +230,7 @@ class Archive:
             logging.debug (f'baseurl (from conf)= {self.baseurl:s}')
 
 #
-#  url for login
+#  construct full url for login
 #
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
@@ -245,12 +239,12 @@ class Archive:
             logging.debug ('')
             logging.debug (f'baseurl= {self.baseurl:s}')
 
-        self.login_url = self.baseurl + '/KoaAPI/nph-koaLogin?'
+        self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
         
         if self.debug:
             logging.debug ('')
             logging.debug (f'login_url= [{self.login_url:s}]')
-	
+
         param = dict()
         param['userid'] = userid
         param['password'] = password
@@ -263,72 +257,47 @@ class Archive:
             logging.debug ('')
             logging.debug (f'url= [{url:s}]')
 
-#         print (f'url= {url:s}')
 
 #
-#    build url_opener
+#     cookiejar declared and linked to cookiepath
 #
-        data = None
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('declare request session with cookie')
+        
+        session = requests.Session()
+        session.cookies = http.cookiejar.MozillaCookieJar (cookiepath)
+        cookiejar = session.cookies
 
+        response = None
         try:
-            opener = urllib.request.build_opener (
-                urllib.request.HTTPCookieProcessor (cookiejar))
-            
-            urllib.request.install_opener (opener)
-            
-            request = urllib.request.Request (url)
-            
-            cookiejar.add_cookie_header (request)
-            
-            if self.debug:
-                logging.debug ('')
-                logging.debug (f'send request')
-
-            response = opener.open (request)
-
-            if self.debug:
-                logging.debug ('')
-                logging.debug (f'response returned')
-
-        except urllib.error.URLError as e:
+            response = session.get (url, cookies=cookiejar)
         
-            status = 'error'
-            msg = 'URLError= ' + str(e)    
-        
-        except urllib.error.HTTPError as e:
-            
-            status = 'error'
-            msg =  'HTTPError= ' +  str(e) 
-            
-        except Exception:
-           
-            status = 'error'
-            msg = 'URL exception'
-             
-        if (status == 'error'):       
-            msg = 'Failed to login: %s' % msg
+        except Exception as e:
+
+            msg = 'Failed to login: ' + str(e)
             print (msg)
-            return;
+            return
 
         if self.debug:
             logging.debug ('')
-            logging.debug ('no error')
-
+            logging.debug ('response.text: ')
+            logging.debug (response.text)
+            logging.debug ('response.headers: ')
+            logging.debug (response.headers)
+       
 #
 #    check content-type in response header: 
-#    if it is 'application/json', then it is an error message
+#    it should be an 'application/json' structure, 
+#    parse for return status and message
 #
-        infostr = dict(response.info())
-
-        contenttype = infostr.get('Content-type')
-
+        contenttype = response.headers['Content-type']
+        
         if self.debug:
             logging.debug ('')
             logging.debug (f'contenttype= {contenttype:s}')
 
-        data = response.read()
-        sdata = data.decode ("utf-8");
-        jsondata = json.loads (sdata);
+        jsondata = json.loads (response.text);
    
         for key,val in jsondata.items():
                 
@@ -345,13 +314,15 @@ class Archive:
 
 
         if (status == 'ok'):
-            cookiejar.save (cookiepath, ignore_discard=True);
+#            cookiejar.save (cookiepath, ignore_discard=True);
+            
+            cookiejar.save ()
         
             msg = 'Successfully login as ' + userid
             self.cookie_loaded = 1
 
 #
-#    print out cookie values
+#    print out cookie values in debug file
 #   
             for cookie in cookiejar:
                     
@@ -362,13 +333,12 @@ class Archive:
                     logging.debug (f'cookie.name= {cookie.name:s}')
                     logging.debug (f'cookie.value= {cookie.value:s}')
                     logging.debug (f'cookie.domain= {cookie.domain:s}')
-            
  
         else:       
             msg = 'Failed to login: ' + msg
 
         print (msg)
-        return;
+        return
 #
 #} end Archive.login
 #
@@ -384,26 +354,50 @@ class Archive:
         
         Required Inputs:
         ---------------    
-        instruments: e.g. HIRES, NIRC2, etc...
+        instrument (string): HIRES
 
-        time: a datetime string in the format of datetime1/datetime2 where 
-            datetime format of is 'yyyy-mm-dd hh:mm:ss'
+        datetime (string): a datetime string in the format of 
+            datetime1/datetime2 where '/' separates the two datetime values` 
+            of format 'yyyy-mm-dd hh:mm:ss'
 
-        outpath: the full output filepath of the returned metadata table
+            the following inputs are acceptable:
+
+            datetime1/: will search data with datetime later than (>=) 
+                        datetime1.
+            
+            /datetime2: will search data with datetime earlier than (<=)
+                        datetime2.
+
+            datetime1: will search data with datetime equal to (=) datetime1.
+
+        outpath (string): a full output filepath of the returned metadata 
+            table
     
         e.g. 
             instrument = 'hires',
             datetime = '2018-03-16 06:10:55/2018-03-18 00:00:00' 
+
+        e.g. 
+            instrument = 'hires',
+            datetime = '2018-03-16 06:10:55/' 
+
+        e.g. 
+            instrument = 'hires',
+            datetime = '/2018-03-18 00:00:00' 
+
+        e.g. 
+            instrument = 'hires',
+            datetime = '2018-03-16 06:10:55' 
 
         Optional inputs:
 	----------------
         cookiepath (string): cookie file path for query the proprietary 
                              KOA data.
         
-	format:  Output format: votable, ascii.ipac, etc.. 
-	         (default: ipac for KOA)
+	format (string):  Output format: votable, ipac, csv, tsv 
+	                  (default: ipac)
         
-	maxrec:  maximum records to be returned 
+	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
  
@@ -430,11 +424,15 @@ class Archive:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter query_datetime:')
-        
+       
+        instrument = str(instrument)
+
         if (len(instrument) == 0):
             print ('Failed to find required parameter: instrument')
             return
- 
+
+        datetime = str(datetime)
+
         if (len(datetime) == 0):
             print ('Failed to find required parameter: datetime')
             return
@@ -470,22 +468,147 @@ class Archive:
 #
 #} end Archive.query_datetime
 #
+ 
+
+    def query_date (self, instrument, date, outpath, **kwargs):
+#
+#{ Archive.query_date
+#
         
+        """
+        'query_date' method search KOA data by 'date_obs' range
+        
+        Required Inputs:
+        ---------------    
+        instrument (string): HIRES
+
+        date (string): a datetime string in the format of 
+            date1/date2 where '/' separates the two date values` 
+            of format 'yyyy-mm-dd'
+
+            the following inputs are acceptable:
+
+            date1/: will search data with date later than (>=) 
+                        date1.
+            
+            /date2: will search data with date earlier than (<=)
+                        date2.
+
+            date1: will search data with date equal to (=) date1.
+
+        outpath (string): a full output filepath of the returned metadata 
+            table
+    
+        e.g. 
+            instrument = 'hires',
+            datetime = '2018-03-16/2018-03-18' 
+
+        e.g. 
+            instrument = 'hires',
+            datetime = '2018-03-16/' 
+
+        e.g. 
+            instrument = 'hires',
+            datetime = '/2018-03-18' 
+
+        e.g. 
+            instrument = 'hires',
+            datetime = '2018-03-16' 
+
+        Optional inputs:
+	----------------
+        cookiepath (string): cookie file path for query the proprietary 
+                             KOA data.
+        
+	format (string):  Output format: votable, ipac, csv, tsv 
+	                  (default: ipac)
+        
+	maxrec (integer):  maximum records to be returned 
+	         default: -1 or not specified will return all requested records
+        """
+ 
+        if (self.debug == 0):
+
+            if ('debugfile' in kwargs):
+            
+                self.debug = 1
+                self.debugfname = kwargs.get ('debugfile')
+
+                if (len(self.debugfname) > 0):
+      
+                    logging.basicConfig (filename=self.debugfname, \
+                        level=logging.DEBUG)
+    
+                    with open (self.debugfname, 'w') as fdebug:
+                        pass
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('debug turned on')
+        
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('')
+            logging.debug ('Enter query_date:')
+       
+        instrument = str(instrument)
+
+        if (len(instrument) == 0):
+            print ('Failed to find required parameter: instrument')
+            return
+
+        date = str(date)
+
+        if (len(date) == 0):
+            print ('Failed to find required parameter: date')
+            return
+
+        if (len(outpath) == 0):
+            print ('Failed to find required parameter: outpath')
+            return
+
+        self.instrument = instrument
+        self.date = date
+        self.outpath = outpath
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'instrument= {self.instrument:s}')
+            logging.debug (f'date= {self.date:s}')
+            logging.debug (f'outpath= {self.outpath:s}')
+
+#
+#    send url to server to construct the select statement
+#
+        param = dict()
+        param['instrument'] = self.instrument
+        param['date'] = self.date
+       
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('call query_criteria')
+
+        self.query_criteria (param, outpath, **kwargs)
+
+        return
+#
+#} end Archive.query_date
+#
+
 
     def query_position (self, instrument, pos, outpath, **kwargs):
 #
 #{ Archive.query_position
 #
-        
         """
         'query_position' method search KOA data by 'position' 
         
         Required Inputs:
         ---------------    
 
-        instruments: e.g. HIRES, NIRC2, etc...
+        instrument (string): HIRES
 
-        pos: a position string in the format of 
+        pos (string): a position string in the format of 
 	
 	1.  circle ra dec radius;
 	
@@ -494,22 +617,21 @@ class Archive:
 	3.  box ra dec width height;
 	
 	All ra dec in J2000 coordinate.
-            datetime format of is 'yyyy-mm-dd hh:mm:ss'
              
         e.g. 
             instrument = 'hires',
             pos = 'circle 230.0 45.0 0.5'
 
-        outpath: the full output filepath of the returned metadata table
+        outpath (string): a full filepath for the returned metadata table
         
         Optional Input:
         ---------------    
         cookiepath (string): cookie file path for query the proprietary 
                              KOA data.
         
-        format: votable, ipac, csv, etc..  (default: ipac)
+        format (string): votable, ipac, csv, tsv  (default: ipac)
 	
-	maxrec:  maximum records to be returned 
+	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
    
@@ -536,7 +658,10 @@ class Archive:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter query_position:')
+      
         
+        instrument = str(instrument)
+
         if (len(instrument) == 0):
             print ('Failed to find required parameter: instrument')
             return
@@ -585,11 +710,12 @@ class Archive:
         Required Inputs:
         ---------------    
 
-        instruments: e.g. HIRES, NIRC2, etc...
+        instrument: HIRES
 
-        object: an object name resolvable by Astropy name_resolve; 
+        object (string): an object name resolvable by SIMBAD, NED, and
+            ExoPlanet's name_resolve; 
        
-        This method resolves the object's coordiates, uses it as the
+        This method resolves the object name into coordiates to be used as the
 	center of the circle position search with default radius of 0.5 deg.
 
         e.g. 
@@ -601,14 +727,11 @@ class Archive:
         cookiepath (string): cookie file path for query the proprietary 
                              KOA data.
         
-	format:  Output format: votable, ascii.ipac, etc.. 
+	format (string):  Output format: votable, ipac, csv, tsv (default: ipac)
 
-        radius = 1.0 (deg)
+        radius (float) = 1.0 (deg)
 
-        Output format: votable, ascii.ipac, etc.. 
-	               (default: ipac)
-	
-	maxrec:  maximum records to be returned 
+	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
    
@@ -635,6 +758,8 @@ class Archive:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter query_object_name:')
+
+        instrument = str(instrument)
 
         if (len(instrument) == 0):
             print ('Failed to find required parameter: instrument')
@@ -776,12 +901,18 @@ class Archive:
 
         param: a dictionary containing a list of acceptable parameters:
 
-            instruments (required): e.g. HIRES, NIRC2, etc...
+            instrument (required): HIRES
 
-            datetime: a datetime string in the format of datetime1/datetime2 
-	        where datetime format of is 'yyyy-mm-dd hh:mm:ss'
-             
-            pos: a position string in the format of 
+            datetime (string): a datetime range string in the format of 
+                datetime1/datetime2, '/' being the separator between first
+                and second dateetime valaues.  
+	        where datetime format is 'yyyy-mm-dd hh:mm:ss'
+            
+            date (string): a date range string in the format of 
+                date1/date2, '/' being the separator between first
+                and second date valaues where date format is 'yyyy-mm-dd'
+            
+            pos (string): a position string in the format of 
 	
 	        1.  circle ra dec radius;
 	
@@ -791,19 +922,20 @@ class Archive:
 	
 	        all in ra dec in J2000 coordinate.
              
-	    target: target name used in the project, this will be searched 
-	        against the database.
+	    target (string): target name used in the project, this will be 
+                searched against the database.
 
-        outpath: file path for the returned metadata table 
+        outpath (string): file path for the returned metadata table 
 
         Optional parameters:
         --------------------
         cookiepath (string): cookie file path for query the proprietary 
                              KOA data.
         
-	format: output table format: votable, ipac, etc.. (default: votable)
+	format (string): output table format -- votable, ipac, csv, tsv;
+            default: ipac
 	    
-	maxrec:  maximum records to be returned 
+	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
 
@@ -845,7 +977,7 @@ class Archive:
             logging.debug (f'len_param= {len_param:d}')
 
             for k,v in param.items():
-                logging.debug (f'k, v= {k:s}, {v:s}')
+                logging.debug (f'k, v= {k:s}, {str(v):s}')
 
         self.cookiepath = ''
         if ('cookiepath' in kwargs): 
@@ -862,6 +994,18 @@ class Archive:
         self.maxrec = -1 
         if ('maxrec' in kwargs): 
             self.maxrec = kwargs.get('maxrec')
+        
+
+#        datatype = type (self.maxrec).__name__
+#        print (f'datatype= {datatype:s}')
+
+        try:
+            self.maxrec = float(self.maxrec)
+            self.maxrec = int(self.maxrec)
+        except Exception as e:
+            print (f'Failed to convert maxrec: ' + str(self.maxrec) + \
+                ' to integer.')
+            return
 
         if self.debug:
             logging.debug ('')
@@ -888,8 +1032,8 @@ class Archive:
 #    urls for nph-tap.py, nph-koaLogin, nph-makeQyery, 
 #    nph-getKoa, and nph-getCaliblist
 #
-        self.tap_url = self.baseurl + '/TAP/nph-tap.py'
-        self.makequery_url = self.baseurl + '/KoaAPI/nph-makeQuery?'
+        self.tap_url = self.baseurl + 'TAP'
+        self.makequery_url = self.baseurl + 'cgi-bin/KoaAPI/nph-makeQuery?'
 
         if self.debug:
             logging.debug ('')
@@ -918,7 +1062,7 @@ class Archive:
                 logging.debug (f'Error: {str(e):s}')
             
             print (str(e))
-            return ('') 
+            return 
         
         if self.debug:
             logging.debug ('')
@@ -938,37 +1082,95 @@ class Archive:
                 logging.debug (f'cookiepath= {self.cookiepath:s}')
        
             if self.debug:
-                self.tap = KoaTap (self.tap_url, \
-                    format=self.format, \
-                    maxrec=self.maxrec, \
-                    cookiefile=self.cookiepath, \
-	            debug=1)
+                
+                try:
+                    self.tap = KoaTap (self.tap_url, \
+                        format=self.format, \
+                        maxrec=self.maxrec, \
+                        cookiefile=self.cookiepath, \
+	                debug=1)
+                
+                except Exception as e:
+            
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug (f'Error: {str(e):s}')
+                    
+                    print (str(e))
+                    return 
+
             else:
-                self.tap = KoaTap (self.tap_url, \
-                    format=self.format, \
-                    maxrec=self.maxrec, \
-                    cookiefile=self.cookiepath)
+                try:
+                    self.tap = KoaTap (self.tap_url, \
+                        format=self.format, \
+                        maxrec=self.maxrec, \
+                        cookiefile=self.cookiepath)
+                
+                except Exception as e:
+            
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug (f'Error: {str(e):s}')
+                    
+                    print (str(e))
+                    return 
+        
         else: 
             if self.debug:
-                self.tap = KoaTap (self.tap_url, \
-                    format=self.format, \
-                    maxrec=self.maxrec, \
-	            debug=1)
+                try:
+                    self.tap = KoaTap (self.tap_url, \
+                        format=self.format, \
+                        maxrec=self.maxrec, \
+	                debug=1)
+                
+                except Exception as e:
+            
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug (f'Error: {str(e):s}')
+                    
+                    print (str(e))
+                    return 
+        
             else:
-                self.tap = KoaTap (self.tap_url, \
-                    format=self.format, \
-                    maxrec=self.maxrec)
+                try:
+                    self.tap = KoaTap (self.tap_url, \
+                        format=self.format, \
+                        maxrec=self.maxrec)
+        
+                except Exception as e:
+            
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug (f'Error: {str(e):s}')
+                    
+                    print (str(e))
+                    return 
         
         if self.debug:
             logging.debug('')
             logging.debug('koaTap initialized')
             logging.debug('')
             logging.debug(f'query= {query:s}')
-            logging.debug('call self.tap.send_async')
 
         print ('submitting request...')
 
-        retstr = self.tap.send_async (query, outpath= self.outpath)
+        if self.debug:
+            logging.debug('')
+            logging.debug('call self.tap.send_async with debug')
+            
+            retstr = self.tap.send_async (query, \
+                outpath=self.outpath, \
+                format=self.format, \
+                maxrec=self.maxrec, debug=1)
+        else:
+            logging.debug('')
+            logging.debug('call self.tap.send_async NO debug')
+            
+            retstr = self.tap.send_async (query, \
+                outpath=self.outpath, \
+                format=self.format, \
+                maxrec=self.maxrec)
         
         if self.debug:
             logging.debug ('')
@@ -996,7 +1198,6 @@ class Archive:
 #} end Archive.query_criteria
 #
         
-
     
     def query_adql (self, query, outpath, **kwargs):
 #
@@ -1009,19 +1210,19 @@ class Archive:
         
         Required Inputs:
         ---------------    
-            query:  a ADQL query
+            query (string):  a ADQL query
 
-            outpath: the output filename the returned metadata table
+            outpath (string): the output filename the returned metadata table
         
         Optional inputs:
 	----------------
             cookiepath (string): cookie file path for query the proprietary 
                                  KOA data.
         
-	    format:  Output format: votable, ipac, csv, tsv, etc.. 
+	    format (string):  Output format: votable, ipac, csv, tsv 
 	             (default: ipac)
         
-	maxrec:  maximum records to be returned 
+	    maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
    
@@ -1102,7 +1303,7 @@ class Archive:
 #
 #    urls for nph-tap.py
 #
-        self.tap_url = self.baseurl + '/TAP/nph-tap.py'
+        self.tap_url = self.baseurl + 'TAP'
 
         if self.debug:
             logging.debug ('')
@@ -1147,15 +1348,26 @@ class Archive:
 
         if self.debug:
             if (len(self.outpath) > 0):
-                retstr = self.tap.send_async (query, outpath=self.outpath, \
+                retstr = self.tap.send_async (query, \
+                    outpath=self.outpath, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
                     debug=1)
             else:
-                retstr = self.tap.send_async (query, debug=1)
+                retstr = self.tap.send_async (query, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+                    debug=1)
         else:
             if (len(self.outpath) > 0):
-                retstr = self.tap.send_async (query, outpath=self.outpath)
+                retstr = self.tap.send_async (query, \
+                    outpath=self.outpath, \
+                    format=self.format, \
+                    maxrec=self.maxrec)
             else:
-                retstr = self.tap.send_async (query)
+                retstr = self.tap.send_async (query, \
+                    format=self.format, \
+                    maxrec=self.maxrec)
         
         if self.debug:
             logging.debug ('')
@@ -1214,12 +1426,12 @@ class Archive:
 
 	Required input:
 	-----
-	metapath: a full path metadata table obtained from running
+	metapath (string): a full path metadata table obtained from running
 	          query methods    
         
-	format:   metasata table's format: ipac, votable, csv, or tsv.
+	format (string):   metasata table's format: ipac, votable, csv, or tsv.
 	
-        outdir:   the directory for depositing the returned files      
+        outdir (string):   the directory for depositing the returned files      
  
 	
         Optional input:
@@ -1227,12 +1439,13 @@ class Archive:
         cookiepath (string): cookie file path for downloading the proprietary 
                              KOA data.
         
-        start_row,
+        start_row (integer),
 	
-        end_row,
+        end_row (integer),
 
-        calibfile: whether to download the associated calibration files (0/1);
-                   default is 0.
+        calibfile (integer): whether to download the associated calibration 
+            files (0/1);
+            default is 0.
         """
         
         if (self.debug == 0):
@@ -1469,8 +1682,8 @@ class Archive:
 #
 #    urls for nph-getKoa, and nph-getCaliblist
 #
-        self.getkoa_url = self.baseurl + '/getKOA/nph-getKOA?return_mode=json&'
-        self.caliblist_url = self.baseurl+ '/KoaAPI/nph-getCaliblist?'
+        self.getkoa_url = self.baseurl + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
+        self.caliblist_url = self.baseurl+ 'cgi-bin/KoaAPI/nph-getCaliblist?'
 
         if self.debug:
             logging.debug ('')
@@ -2436,6 +2649,7 @@ class KoaTap:
             logging.debug ('')
             logging.debug (f'url= {self.url:s}')
             logging.debug (f'cookiepath= {self.cookiepath:s}')
+            logging.debug (f'self.maxrec= {self.maxrec:d}')
 
 #
 #    turn on server debug
@@ -2453,6 +2667,7 @@ class KoaTap:
                 logging.debug ('')
                 logging.debug (f'key= {key:s} val= {str(self.datadict[key]):s}')
     
+        self.datadict['debug'] = 1              
         
         self.cookiejar = http.cookiejar.MozillaCookieJar (self.cookiepath)
          
@@ -2497,6 +2712,9 @@ class KoaTap:
        
         debug = 0
 
+        if ('debug' in kwargs):
+            debug = kwargs.get('debug') 
+ 
         if debug:
             logging.debug ('')
             logging.debug ('Enter send_async:')
@@ -3012,19 +3230,40 @@ class KoaTap:
         if debug:
             logging.debug ('')
             logging.debug (f'fpath= {fpath:s}')
-     
-        fp = open (fpath, "wb")
-            
-        for data in self.response_result.iter_content(4096):
-                
-            len_data = len(data)            
+    
+        try:
+            fp = open (fpath, "wb")
         
-            if (len_data < 1):
-                break
+        except Exception as e:
 
-            fp.write (data)
+            if debug:
+                logging.debug ('')
+                logging.debug (f'save_data error: {str(e):s}')
+            
+            self.msg = 'Failed to open file [' + fpath + '] for write.'
+            return (self.msg)
+
         
-        fp.close()
+        try:
+            for data in self.response_result.iter_content(4096):
+                
+                len_data = len(data)            
+        
+                if (len_data < 1):
+                    break
+
+                fp.write (data)
+        
+            fp.close()
+
+        except Exception as e:
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'save_data error: {str(e):s}')
+            
+            self.msg = 'save_data error: ' + str(e)
+            return (self.msg)
 
         if debug:
             logging.debug ('')

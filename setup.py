@@ -9,7 +9,7 @@ with open ("README.md", "r") as fh:
 
 setup(
     name="pykoa",
-    version="0.2.1",
+    version="0.3.0",
     author="Mihseh Kong",
     description="KOA archive access client", 
     long_description = long_description,
