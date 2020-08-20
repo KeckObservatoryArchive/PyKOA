@@ -2780,8 +2780,6 @@ class KoaTap:
             
             return (self.msg)
 
-     
-        self.statusurl = ''
 
         if debug:
             logging.debug ('')
@@ -2790,16 +2788,11 @@ class KoaTap:
             logging.debug (self.response)
             logging.debug ('self.response.headers: ')
             logging.debug (self.response.headers)
-            
-            
-#        print (f'status_code= {self.response.status_code:d}')
-           
-        if debug:
             logging.debug ('')
             logging.debug (f'status_code= {self.response.status_code:d}')
             
 #
-#    if status_code != 303: probably error message
+# {   if status_code != 303: probably error message
 #
         if (self.response.status_code != 303):
             
@@ -2821,14 +2814,16 @@ class KoaTap:
             self.status = ''
             self.msg = ''
            
+            if debug:
+                logging.debug ('')
+                logging.debug ('self.response:')
+                logging.debug (self.response.text)
+      
             if (self.content_type == 'application/json'):
-#
-#    error message
-#
+                
                 if debug:
                     logging.debug ('')
-                    logging.debug ('self.response:')
-                    logging.debug (self.response.text)
+                    logging.debug ('case json errmsg:')
       
                 try:
                     data = self.response.json()
@@ -2847,7 +2842,7 @@ class KoaTap:
                         logging.debug (f'status= {self.status:s}')
                         logging.debug (f'msg= {self.msg:s}')
 
-                    return (self.msg)
+                    return (self.response.text)
 
                 self.status = data['status']
                 self.msg = data['msg']
@@ -2857,9 +2852,42 @@ class KoaTap:
                     logging.debug (f'status= {self.status:s}')
                     logging.debug (f'msg= {self.msg:s}')
 
-                if (self.status == 'error'):
-                    self.msg = data['msg']
+                return (self.msg)
+
+            elif (self.content_type == 'text/xml'):
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('case xml errmsg:')
+      
+                self.msg = ''
+                try:
+                    self.msg = self.extract_xmlerr (self.response.text)
+                    
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'returned extract_xmlerr: {self.msg:s}')
+            
                     return (self.msg)
+
+                except Exception as e:
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'parse errmsg exception: {str(e):s}')
+    
+                    return (self.response.text)
+
+            else:
+                return (self.response.text)
+        
+        if debug:
+            logging.debug ('')
+            logging.debug ('here')
+    
+#
+#} end dealing with status_code != 303
+#
 
 #
 #    retrieve statusurl
@@ -3176,10 +3204,6 @@ class KoaTap:
             logging.debug ('')
             logging.debug ('send request to get resulturl')
 
-
-
-
-
 #
 # save table to file
 #
@@ -3200,6 +3224,142 @@ class KoaTap:
 
 
 #
+# extract errmsg from xml return
+#
+    def extract_xmlerr (self, xmlstruct):
+#
+#{ KoaTap.extract_xmlerr
+#
+        debug = 0
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('Enter extract_xmlerr:')
+            logging.debug (f'xmlstruct= {xmlstruct:s}')
+      
+#
+#    convert status xml structure to dictionary doc 
+#
+        doc = None
+        try:
+            doc = xmltodict.parse (xmlstruct)
+
+        except Exception as e:
+
+            self.msg = 'Failed to parse xmltodict: ' + str(e)
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+
+            raise Exception (self.msg)
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('doc: ')
+            logging.debug (doc)
+        
+#
+#    check if this is a error message: in the structure of a votable
+#
+        votbl = None
+        try: 
+            votbl = doc['VOTABLE']
+	
+        except Exception as e:
+           
+            self.msg = 'Failed to extract votbl from doc '
+	    
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+            raise Exception (self.msg)    
+        
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('votbl found so it is an errmsg')
+            logging.debug (votbl)
+
+        
+        if (votbl is None):
+            self.msg = 'Not a votbl format.'
+	    
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+            
+            raise Exception (self.msg)    
+     
+        
+        info = None
+        try: 
+            info = votbl['RESOURCE']['INFO']
+
+        except Exception as e:
+           
+            self.msg = 'Failed to extract INFO from doc '
+	    
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+            
+            raise Exception (self.msg)    
+     
+        if self.debug:
+            logging.debug ('')
+            logging.debug ('info found: extract errmsg')
+            logging.debug (info)
+        
+        if (info is None):
+            
+            self.msg = 'No error message found.'
+            
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'self.msg= {self.msg:s}')
+            
+            raise Exception (self.msg)    
+     
+        
+        infoval = ''
+        errmsg = ''
+        try: 
+            infoval = info['@value'] 
+            errmsg = info['#text'] 
+	
+        except Exception as e:
+           
+            self.msg = 'Failed to extract infoval and text from doc '
+	    
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+            
+            raise Exception (self.msg)    
+     
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'infoval= {infoval:s}')
+            logging.debug (f'errmsg= {errmsg:s}')
+
+        if (infoval.lower() != 'error'):
+            
+            self.msg = 'No error message found.'
+        
+            if self.debug:
+                logging.debug ('')
+                logging.debug (f'infoval not error: {infoval.lower():s}')
+
+            raise Exception (self.msg)    
+        
+        return (errmsg)    
+
+#
+#} end KoaTap.extract_xmlerr
+#
+
+
+#
 # save data to astropy table
 #
     def save_data (self, outpath):
@@ -3207,7 +3367,7 @@ class KoaTap:
 #{ KoaTap.save_date
 #
 
-        debug = 1
+        debug = 0
 
         if debug:
             logging.debug ('')
@@ -3309,7 +3469,7 @@ class KoaTap:
 #{ KoaTap.print_date
 #
 
-        debug = 1
+        debug = 0
 
         if debug:
             logging.debug ('')
@@ -3351,7 +3511,7 @@ class KoaTap:
 #{ KoaTap.get_data
 #
 
-        debug = 1
+        debug = 0
         
         if debug:
             logging.debug ('')
