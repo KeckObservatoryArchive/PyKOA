@@ -74,11 +74,12 @@ class Archive:
 #{ Archive class
 #
     """
-    'Archive' class provides KOA archive access functions for searching the
-    Keck On-line Archive (KOA) data via the nexsciTAP interface.  
+    The 'Archive' class provides functions for accessing data stored in the 
+    Keck Observatory Archive (KOA). Queries are performed via the nexsciTAP
+    server.
     
-    The user's KOA credentials (given at login) are used to search the 
-    proprietary data.
+    Keck PIs can use the KOA credentials assigned to them when data were 
+    acquired (given at login) to search for their proprietary data.
 
     Example:
     --------
@@ -119,7 +120,7 @@ class Archive:
 #{ Archive.init
 #
         """
-        'init' method initialize the class with optional debugfile flag
+        'init' method initializes the class with optional debugfile flag.
 
         Optional inputs:
         ----------------
@@ -186,9 +187,9 @@ class Archive:
 #{ Archive.login
 #
         """
-        auth method validates a user has a valid KOA account; it takes two
+        'login' method validates a user has a valid KOA account; it takes two
         'keyword' arguments: userid and password. If the inputs are not 
-        provided in the keyword, the auth method prompts for inputs.
+        provided in the keyword, the login method prompts for inputs.
 
         Required input:
         ---------------     
@@ -199,9 +200,9 @@ class Archive:
         
         Keyword input:
         ---------------     
-	userid     (string): a valid user id  in the KOA's user table.
+	userid     (string): a valid user id assigned by KOA;
         
-        password   (string): a valid password in the KOA's user table. 
+        password   (string): a valid password in the KOA's user table; 
 
         
         Calling synopsis: 
@@ -398,25 +399,25 @@ class Archive:
 #
         
         """
-        'query_datetime' method search KOA data by 'datetime' range
+        'query_datetime' method searches KOA by 'datetime' range
         
         Required Inputs:
         ---------------    
         instrument (string): HIRES
 
         datetime (string): a datetime string in the format of 
-            datetime1/datetime2 where '/' separates the two datetime values` 
+            datetime1/datetime2 where '/' separates the two datetime values
             of format 'yyyy-mm-dd hh:mm:ss'
 
             the following inputs are acceptable:
 
             datetime1/: will search data with datetime later than (>=) 
-                        datetime1.
+                        datetime1
             
             /datetime2: will search data with datetime earlier than (<=)
-                        datetime2.
+                        datetime2
 
-            datetime1: will search data with datetime equal to (=) datetime1.
+            datetime1: will search data with datetime equal to (=) datetime1
 
         outpath (string): a full output filepath of the returned metadata 
             table
@@ -440,7 +441,7 @@ class Archive:
         Optional inputs:
 	----------------
         cookiepath (string): cookie file path for query the proprietary 
-                             KOA data.
+                             KOA data
         
 	format (string):  Output format: votable, ipac, csv, or tsv 
 	                  (default: ipac)
@@ -524,7 +525,7 @@ class Archive:
 #
         
         """
-        'query_date' method search KOA data by 'date_obs' range
+        'query_date' method searches KOA by 'date_obs' range
         
         Required Inputs:
         ---------------    
@@ -537,12 +538,12 @@ class Archive:
             the following inputs are acceptable:
 
             date1/: will search data with date later than (>=) 
-                        date1.
+                        date1
             
             /date2: will search data with date earlier than (<=)
-                        date2.
+                        date2
 
-            date1: will search data with date equal to (=) date1.
+            date1: will search data with date equal to (=) date1
 
         outpath (string): a full output filepath of the returned metadata 
             table
@@ -566,9 +567,9 @@ class Archive:
         Optional inputs:
 	----------------
         cookiepath (string): cookie file path for querying the proprietary 
-                             KOA data.
+                             KOA data
         
-	format (string):  Output format: votable, ipac, csv, tsv 
+	format (string):  Output format: votable, ipac, csv, or tsv 
 	                  (default: ipac)
         
 	maxrec (integer):  maximum records to be returned 
@@ -649,7 +650,7 @@ class Archive:
 #{ Archive.query_position
 #
         """
-        'query_position' method search KOA data by 'position' 
+        'query_position' method searches KOA by 'position' 
         
         Required Inputs:
         ---------------    
@@ -664,7 +665,7 @@ class Archive:
 	
 	3.  box ra dec width height;
 	
-	All ra dec in J2000 coordinate.
+	All RA Dec in J2000 coordinate.
              
         e.g. 
             instrument = 'hires',
@@ -753,7 +754,7 @@ class Archive:
 #
         
         """
-        'query_object_name' method search KOA data by 'object name' 
+        'query_object' method searches KOA by 'object name' 
         
         Required Inputs:
         ---------------    
@@ -944,7 +945,7 @@ class Archive:
 #
         
         """
-        'query_criteria' method allows the search of KOA data by multiple
+        'query_criteria' method allows searches of KOA by multiple
         parameters specified in a python dictionary (param).
 
         param: a dictionary containing a list of acceptable parameters:
@@ -1254,11 +1255,11 @@ class Archive:
        
         """
         'query_adql' method receives a qualified ADQL query string from
-	user input.
+	the user input.
         
         Required Inputs:
         ---------------    
-            query (string):  a ADQL query
+            query (string):  an ADQL query
 
             outpath (string): the output filename of the returned metadata table
         
@@ -1267,7 +1268,7 @@ class Archive:
             cookiepath (string): cookie file path for query the proprietary 
                                  KOA data.
         
-	    format (string):  Output format: votable, ipac, csv, or tsv 
+	    format (string):  output format: votable, ipac, csv, or tsv 
 	             (default: ipac)
         
 	    maxrec (integer):  maximum records to be returned 
@@ -1469,7 +1470,7 @@ class Archive:
 #
     
         """
-        The download method allows users to download FITS files (and/or) 
+        'download' method allows download of FITS files (and/or) 
         associated calibration files shown in their metadata file.
 
 	Required input:
@@ -1477,7 +1478,7 @@ class Archive:
 	metapath (string): a full path metadata table obtained from running
 	          query methods    
         
-	format (string):   metasata table's format: ipac, votable, csv, or tsv.
+	format (string):   metadata table's format: ipac, votable, csv, or tsv.
 	
         outdir (string):   the directory for depositing the returned files      
  
@@ -1485,11 +1486,12 @@ class Archive:
         Optional input:
         ----------------
         cookiepath (string): cookie file path for downloading the proprietary 
-                             KOA data.
+                             KOA data;
         
-        start_row (integer),
+        start_row (integer): default is start_row = 0;
 	
-        end_row (integer),
+        end_row (integer): default is end_row = nrows - 1 where nrows is the 
+                           number of rows in the metadata file;
 
         calibfile (integer): whether to download the associated calibration 
             files (0: do not download; 1: download);
@@ -2595,8 +2597,8 @@ class KoaTap:
     """
     KoaTap class provides client access to KOA's TAP service.   
 
-    Public data doesn't not require user login, optional KOA login via 
-    KoaLogin class are used to search a user's proprietary data.
+    Public data does not require user login, optional KOA login via 
+    KoaLogin class are used to search for a user's proprietary data.
 
     Calling Synopsis (example):
 
