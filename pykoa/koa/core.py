@@ -1,3 +1,53 @@
+"""
+Copyright (c) 2020, California Institute of Technology (Caltech). 
+
+This software was developed by the Keck Observatory Archive (KOA), a
+collaboration between the NASA Exoplanet Science Institute (NExScI) and
+the W. M. Keck Observatory (WMKO). NExScI is sponsored by NASA's
+Exoplanet Exploration Program, and operated by the
+California Institute of Technology in coordination with the Jet
+Propulsion Laboratory (JPL).
+
+All rights not granted herein are expressly reserved by Caltech.
+
+Redistribution and use in source and binary forms for academic and other 
+non-commercial purposes, with or without modification, are permitted 
+provided that the following conditions are met:
+
+    Redistributions of source code, including modified source code, must 
+    retain the above copyright notice, this list of conditions and the 
+    following disclaimer.
+
+    Redistributions in binary form or a modified form of the source code 
+    must reproduce the above copyright notice, this list of conditions and 
+    the following disclaimer in the documentation and/or other materials 
+    provided with the distribution.
+
+    Neither the name of the California Institute of Technology, the names 
+    of its employees, nor the names of its contributors may be used to 
+    endorse or promote products derived from this software without specific
+    prior written permission.
+
+    Where a modified version of the source code is redistributed publicly 
+    in source or binary forms, the modified source code must be published 
+    in a freely accessible manner, or otherwise redistributed at no charge
+    to anyone requesting a copy of the modified source code, subject to the
+    same terms as this agreement.
+
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+POSSIBILITY OF SUCH DAMAGE.
+"""
+
 import os 
 import sys
 import io
@@ -25,7 +75,7 @@ class Archive:
 #
     """
     'Archive' class provides KOA archive access functions for searching the
-    Keck On-line Archive (KOA) data via TAP interface.  
+    Keck On-line Archive (KOA) data via the nexsciTAP interface.  
     
     The user's KOA credentials (given at login) are used to search the 
     proprietary data.
@@ -38,9 +88,7 @@ class Archive:
 
     from pykoa.koa import Koa 
 
-    Koa.query_datetime ('2018-03-16 00:00:00/2018-03-18 00:00:00', \
-        outpath= './meta.xml', \
-	format='ipac') 
+    Koa.query_datetime ('2018-03-16 00:00:00/2018-03-18 00:00:00', outpath= './meta.xml', format='ipac') 
     """
     
     tap = None
@@ -394,7 +442,7 @@ class Archive:
         cookiepath (string): cookie file path for query the proprietary 
                              KOA data.
         
-	format (string):  Output format: votable, ipac, csv, tsv 
+	format (string):  Output format: votable, ipac, csv, or tsv 
 	                  (default: ipac)
         
 	maxrec (integer):  maximum records to be returned 
@@ -482,7 +530,7 @@ class Archive:
         ---------------    
         instrument (string): HIRES
 
-        date (string): a datetime string in the format of 
+        date (string): a date_obs string in the format of 
             date1/date2 where '/' separates the two date values` 
             of format 'yyyy-mm-dd'
 
@@ -517,7 +565,7 @@ class Archive:
 
         Optional inputs:
 	----------------
-        cookiepath (string): cookie file path for query the proprietary 
+        cookiepath (string): cookie file path for querying the proprietary 
                              KOA data.
         
 	format (string):  Output format: votable, ipac, csv, tsv 
@@ -626,7 +674,7 @@ class Archive:
         
         Optional Input:
         ---------------    
-        cookiepath (string): cookie file path for query the proprietary 
+        cookiepath (string): cookie file path for querying the proprietary 
                              KOA data.
         
         format (string): votable, ipac, csv, tsv  (default: ipac)
@@ -729,7 +777,7 @@ class Archive:
         
 	format (string):  Output format: votable, ipac, csv, tsv (default: ipac)
 
-        radius (float) = 1.0 (deg)
+        radius (float): search radius in deg (default = 0.5 deg)
 
 	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
@@ -871,7 +919,7 @@ class Archive:
             logging.debug ('')
             logging.debug (f'pos= {self.pos:s}')
        
-        print (f'object name resolved: ra2000= {ra2000:s}, de2000c={dec2000:s}')
+        print (f'object name resolved: ra2000= {ra2000:s}, dec2000={dec2000:s}')
  
  
 #
@@ -897,7 +945,7 @@ class Archive:
         
         """
         'query_criteria' method allows the search of KOA data by multiple
-        the parameters specified in a dictionary (param).
+        parameters specified in a python dictionary (param).
 
         param: a dictionary containing a list of acceptable parameters:
 
@@ -905,8 +953,8 @@ class Archive:
 
             datetime (string): a datetime range string in the format of 
                 datetime1/datetime2, '/' being the separator between first
-                and second dateetime valaues.  
-	        where datetime format is 'yyyy-mm-dd hh:mm:ss'
+                and second datetime valaues where datetime format is 
+                'yyyy-mm-dd hh:mm:ss'
             
             date (string): a date range string in the format of 
                 date1/date2, '/' being the separator between first
@@ -920,19 +968,19 @@ class Archive:
 	
 	        3.  box ra dec width height;
 	
-	        all in ra dec in J2000 coordinate.
+	        all RA Dec in J2000 coordinate.
              
 	    target (string): target name used in the project, this will be 
-                searched against the database.
+                searched against the database -- not SIMBAD or NED.
 
         outpath (string): file path for the returned metadata table 
 
         Optional parameters:
         --------------------
-        cookiepath (string): cookie file path for query the proprietary 
-                             KOA data.
+        cookiepath (string): cookie file path obtained via login method, only
+                             required for querying the proprietary KOA data.
         
-	format (string): output table format -- votable, ipac, csv, tsv;
+	format (string): output table format -- votable, ipac, csv, or tsv;
             default: ipac
 	    
 	maxrec (integer):  maximum records to be returned 
@@ -1212,14 +1260,14 @@ class Archive:
         ---------------    
             query (string):  a ADQL query
 
-            outpath (string): the output filename the returned metadata table
+            outpath (string): the output filename of the returned metadata table
         
         Optional inputs:
 	----------------
             cookiepath (string): cookie file path for query the proprietary 
                                  KOA data.
         
-	    format (string):  Output format: votable, ipac, csv, tsv 
+	    format (string):  Output format: votable, ipac, csv, or tsv 
 	             (default: ipac)
         
 	    maxrec (integer):  maximum records to be returned 
@@ -1444,7 +1492,7 @@ class Archive:
         end_row (integer),
 
         calibfile (integer): whether to download the associated calibration 
-            files (0/1);
+            files (0: do not download; 1: download);
             default is 0.
         """
         

@@ -1,16 +1,29 @@
 KOA Table Access Protocol (TAP) Client
 ======================================
 
-The KOA Table Access Protocol service is a general tool for making 
-SQL queries against KOA database tables (which reside in an Oracle
-DBMS).  TAP is a standard defined by the International Virtual 
-Astronomy Alliance (IVOA).
+Version 1 of PyKOA offers access to public raw science and calibration files 
+acquired with the HIRES echelle-spectrograph, and for Keck Observatory PIs, 
+secure access to their protected data with the KOA credentials already assigned
+to them. The remaining Keck instruments are expected to be available before the
+end of 2020. Queries made through PyKOA are underpinned by nexsciTAP, a NExScI 
+Python-based server that implements the IVOA Table Access Protocol (TAP). 
+This design enables a rich variety of searches, including cone, box, polygon, 
+or all-sky spatial searches; temporal searches; searches on program 
+infortmation; and complex searches on multiple attributes.
 
-There are multiple TAP client packages in existence (notably TAPPlus
-from the AstroQuery Python package.  This client does not try to 
-reproduce that functionality but rather provide simple-to-use custom
-query support for a few common use cases (e.g. query by proposal ID).
-In addition, it supports proprietary access using standard session
-cookies and a separate login service.
+The Keck Observatory Archive (KOA) is a collaboration between the NASA 
+Exoplanet Science Institute (NExScI) and the W. M. Keck Observatory (WMKO). 
+NExScI is sponsored by NASA's Exoplanet Exploration Program, and operated by 
+the California Institute of Technology in coordination with the Jet Propulsion 
+Laboratory (JPL).
 
-This software is written in pure Python 3.  
+If you used PyKOA in your resesearch, please acknowledge KOA as follows: 
+
+    "This research has made use of the Keck Observatory Archive (KOA), which 
+    is operated by the W. M. Keck Observatory and the NASA Exoplanet Science 
+    Institute (NExScI), under contract with the National Aeronautics and 
+    Space Administration." 
+
+Please also acknowledge the PI(s) of datasets that have been accesses 
+through PyKOA.
+
