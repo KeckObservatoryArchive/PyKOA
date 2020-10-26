@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 
 extensions = []
 
-reqs = ['requests', 'xmltodict']
+reqs = ['requests', 'xmltodict', 'bs4', 'lxml']
 
 with open ("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
     name="pykoa",
-    version="1.2",
+    version="1.3",
     author="Mihseh Kong",
     author_email="mihseh@ipac.caltech.edu",
     description="KOA archive access client", 
