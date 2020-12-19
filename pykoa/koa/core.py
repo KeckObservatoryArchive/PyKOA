@@ -1236,7 +1236,8 @@ class Archive:
 
         if (indx >= 0):
             print (retstr)
-            sys.exit()
+            return
+            #sys.exit()
 
 #
 #    no error: 
@@ -1429,7 +1430,8 @@ class Archive:
     
         if (indx >= 0):
             print (retstr)
-            sys.exit()
+            return
+            #sys.exit()
 
 #
 #    no error: 
@@ -1473,11 +1475,15 @@ class Archive:
         'download' method allows download of FITS files (and/or) 
         associated calibration files shown in their metadata file.
 
+        *** Requirement: To download files, the following three columns: 
+            instrume, koaid, and filehand must be included in the input
+            metadata file.
+
 	Required input:
 	-----
 	metapath (string): a full path metadata table obtained from running
 	          query methods    
-        
+       
 	format (string):   metadata table's format: ipac, votable, csv, or tsv.
 	
         outdir (string):   the directory for depositing the returned files      
@@ -1602,7 +1608,8 @@ class Archive:
             self.msg = 'Failed to read metadata table to astropy table:' + \
                 str(e) 
             print (self.msg)
-            sys.exit()
+            return
+            #sys.exit()
 
         self.len_tbl = len(self.astropytbl)
 
@@ -1645,11 +1652,26 @@ class Archive:
             logging.debug (f'self.ind_instrume= {self.ind_instrume:d}')
             logging.debug (f'self.ind_koaid= {self.ind_koaid:d}')
             logging.debug (f'self.ind_filehand= {self.ind_filehand:d}')
-       
+      
+        if (self.ind_instrume == -1):
+            print ('Column [instrume] is required in the metadata file for downloading data.')
+            return
+            #sys.exit()
+        
+        if (self.ind_koaid == -1):
+            print ('Column [koaid] is required in the metadata file for downloading data.')
+            return
+            #sys.exit()
+        
+        if (self.ind_filehand == -1):
+            print ('Column [filehand] is required in the metadata file for downloading data.')
+            return
+            #sys.exit()
     
         if (self.len_tbl == 0):
             print ('There is no data in the metadata table.')
-            sys.exit()
+            return
+            #sys.exit()
         
         calibfile = 0 
         if ('calibfile' in kwargs): 
@@ -1658,7 +1680,6 @@ class Archive:
         if self.debug:
             logging.debug ('')
             logging.debug (f'calibfile= {calibfile:d}')
-
 
         srow = 0;
         erow = self.len_tbl - 1
@@ -1710,7 +1731,8 @@ class Archive:
             
             self.msg = 'Failed to create {self.outdir:s}:' + str(e) 
             print (self.msg)
-            sys.exit()
+            return
+            #sys.exit()
 
         if self.debug:
             logging.debug ('')
@@ -1754,7 +1776,9 @@ class Archive:
         print (f'please check your outdir: {self.outdir:s} for  progress.')
  
         for l in range (srow, erow+1):
-       
+        #
+        #{ for loop for download FITS files
+        #
             if self.debug:
                 logging.debug ('')
                 logging.debug (f'l= {l:d}')
@@ -1833,11 +1857,11 @@ class Archive:
                     print (f'File [{koaid:s}] download: {str(e):s}')
 
 
-#
-#    if calibfile == 1: download calibfile
-#
             if (calibfile == 1):
-
+            #
+            # {   if calibfile == 1: download calibfile
+            #
+    
                 if self.debug:
                     logging.debug ('')
                     logging.debug ('calibfile=1: downloading calibfiles')
@@ -1876,26 +1900,32 @@ class Archive:
                         logging.debug ('')
                         logging.debug (f'caliblist url= {url:s}')
 
-                try:
-                    self.__submit_request (url, caliblist, cookiejar)
-                    self.ncaliblist = self.ncaliblist + 1
+                    try:
+                        self.__submit_request (url, caliblist, cookiejar)
+                        self.ncaliblist = self.ncaliblist + 1
 
-                    self.msg =  'Returned file written to: ' + caliblist   
+                        self.msg =  'Returned file written to: ' + caliblist   
            
-                    if self.debug:
-                        logging.debug ('')
-                        logging.debug ('returned __submit_request')
-                        logging.debug (f'self.msg= {self.msg:s}')
+                        if self.debug:
+                            logging.debug ('')
+                            logging.debug ('returned __submit_request')
+                            logging.debug (f'self.msg= {self.msg:s}')
             
-                except Exception as e:
-                    print (f'File [{caliblist:s}] download: {str(e):s}')
+                    except Exception as e:
+                        #print (f'File [{caliblist:s}] download: {str(e):s}')
+                        #self.msg = 'Error downloading caliblist [' + \
+                        #    caliblist + ']:' + str(e)
+                        
+                        self.msg = 'No associated calibration list for ' + \
+                            koaid
+                        print (f'{self.msg:s}')
+                        return
 
 #
 #    check again after caliblist is successfully downloaded, if caliblist 
 #    exists: download calibfiles
 #     
                 isExist = os.path.exists (caliblist)
-	  
                                   
                 if (isExist):
 
@@ -1923,10 +1953,12 @@ class Archive:
                             logging.debug (f'errmsg= {self.msg:s}')
 
 #                endif (download_calibfiles):
-#            endif (calibfile == 1):
-
-#        endfor l in range (srow, erow+1)
-
+            # 
+            #} endif (calibfile == 1):
+            #
+        #
+        #}        endfor l in range (srow, erow+1)
+        #
 
         if self.debug:
             logging.debug ('')
