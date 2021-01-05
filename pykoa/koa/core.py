@@ -834,7 +834,7 @@ class Archive:
 
         radius = 0.5 
         if ('radius' in kwargs):
-            radiusi_str = kwargs.get('radius')
+            radius_str = kwargs.get('radius')
             radius = float(radius_str)
 
         if self.debug:
