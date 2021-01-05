@@ -89,7 +89,7 @@ class Archive:
 
     from pykoa.koa import Koa 
 
-    Koa.query_datetime ('2018-03-16 00:00:00/2018-03-18 00:00:00', outpath= './meta.xml', format='ipac') 
+    Koa.query_datetime ('hires', '2018-03-16 00:00:00/2018-03-18 00:00:00', outpath= './meta.xml', format='ipac') 
     """
     
     tap = None
@@ -1729,7 +1729,7 @@ class Archive:
 
         except Exception as e:
             
-            self.msg = 'Failed to create {self.outdir:s}:' + str(e) 
+            self.msg = f'Failed to create {self.outdir:s}: {str(e):s}'
             print (self.msg)
             return
             #sys.exit()
