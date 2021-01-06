@@ -10,7 +10,7 @@ class Conf (_config.ConfigNamespace):
     Configuration parameters for 'astroquery.koa'.
     """
     server = _config.ConfigItem (
-        ['https://koa.ipac.caltech.edu/cgi-bin/'],
+        ['https://koa.ipac.caltech.edu/'],
         'Name of the KOA server to use.') 
 
     timeout = _config.ConfigItem (

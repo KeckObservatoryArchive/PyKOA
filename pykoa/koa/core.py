@@ -150,6 +150,11 @@ class Archive:
 #
 #    during dev or test, baseurl will be a keyword input
 #
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'conf.server= {conf.server:s}')
+
+
         self.baseurl = conf.server
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
@@ -272,6 +277,10 @@ class Archive:
 #
 #    retrieve baseurl from conf class;
 #
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'conf.server= {conf.server:s}')
+
         self.baseurl = conf.server
 
         if self.debug:
