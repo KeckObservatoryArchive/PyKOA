@@ -17,7 +17,7 @@ NExScI is sponsored by NASA's Exoplanet Exploration Program, and operated by
 the California Institute of Technology in coordination with the Jet Propulsion 
 Laboratory (JPL).
 
-If you used PyKOA in your resesearch, please acknowledge KOA as follows: 
+If you used PyKOA in your research, please acknowledge KOA as follows: 
 
     "This research has made use of the Keck Observatory Archive (KOA), which 
     is operated by the W. M. Keck Observatory and the NASA Exoplanet Science 
