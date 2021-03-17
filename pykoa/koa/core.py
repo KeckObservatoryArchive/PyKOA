@@ -559,19 +559,19 @@ class Archive:
     
         e.g. 
             instrument = 'hires',
-            datetime = '2018-03-16/2018-03-18' 
+            date = '2018-03-16/2018-03-18' 
 
         e.g. 
             instrument = 'hires',
-            datetime = '2018-03-16/' 
+            date = '2018-03-16/' 
 
         e.g. 
             instrument = 'hires',
-            datetime = '/2018-03-18' 
+            date = '/2018-03-18' 
 
         e.g. 
             instrument = 'hires',
-            datetime = '2018-03-16' 
+            date = '2018-03-16' 
 
         Optional inputs:
 	----------------
