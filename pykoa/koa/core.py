@@ -929,7 +929,7 @@ class Archive:
             logging.debug ('')
             logging.debug (f'pos= {self.pos:s}')
        
-        print (f'object name resolved: ra2000= {ra2000:s}, dec2000={dec2000:s}')
+        print (f'object name resolved: ra= {ra2000:s}, dec={dec2000:s}')
  
  
 #
