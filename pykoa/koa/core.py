@@ -1928,7 +1928,8 @@ class Archive:
                         self.msg = 'No associated calibration list for ' + \
                             koaid
                         print (f'{self.msg:s}')
-                        return
+                        continue 
+                         
 
 #
 #    check again after caliblist is successfully downloaded, if caliblist 
