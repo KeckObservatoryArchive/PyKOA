@@ -674,7 +674,7 @@ class Archive:
 	
 	3.  box ra dec width height;
 	
-	All RA Dec in J2000 coordinate.
+	All RA Dec in decimal degree J2000 coordinate.
              
         e.g. 
             instrument = 'hires',
@@ -978,7 +978,7 @@ class Archive:
 	
 	        3.  box ra dec width height;
 	
-	        all RA Dec in J2000 coordinate.
+	        all RA Dec in decimal degree J2000 coordinate.
              
 	    target (string): target name used in the project, this will be 
                 searched against the database -- not SIMBAD or NED.
