@@ -64,6 +64,7 @@ import requests
 import urllib 
 import http.cookiejar
 
+from datetime import date
 #from astropy.coordinates import name_resolve
 from astropy.table import Table, Column
 
@@ -89,7 +90,10 @@ class Archive:
 
     from pykoa.koa import Koa 
 
-    Koa.query_datetime ('hires', '2018-03-16 00:00:00/2018-03-18 00:00:00', outpath= './meta.xml', format='ipac') 
+    Koa.query_datetime ('hires', \
+        '2018-03-16 00:00:00/2018-03-18 00:00:00', \
+        outpath= './meta.xml', \
+        format='ipac') 
     """
     
     tap = None
@@ -674,7 +678,7 @@ class Archive:
 	
 	3.  box ra dec width height;
 	
-	All RA Dec in J2000 coordinate.
+	All RA Dec in decimal degree J2000 coordinate.
              
         e.g. 
             instrument = 'hires',
@@ -978,7 +982,7 @@ class Archive:
 	
 	        3.  box ra dec width height;
 	
-	        all RA Dec in J2000 coordinate.
+	        all RA Dec in decimal degree J2000 coordinate.
              
 	    target (string): target name used in the project, this will be 
                 searched against the database -- not SIMBAD or NED.
@@ -1452,15 +1456,690 @@ class Archive:
 #
 
 
+    def query_moving_object (self, **kwargs):
+#
+#{ Archive.query_moving_object
+#
+        """
+        'query_moving_object' method searches KOA for moving object. 
+        Due to the high number of input parameters, all inputs are made 
+        to be keyword parameters.
+        
+        Required Inputs:
+        ---------------    
+        instrument (string): one of KOA instruments e.g. nirc2, nirspec, etc..;
+        
+        object (string): moving object to search e.g. pluto, jupiter, etc.. 
+
+        startdate (string): a date string in the format of 'yyyy-mm-dd'
+
+        outpath (string): a full output filepath for the returned json file
+            which contains moving object files and if the 'graph option' is
+            set to 1, the return file also include the png file showing
+            moving object's trajectories.
+    
+        
+        Optional inputs:
+	----------------
+        enddate (string): a date string in the format of 'yyyy-mm'dd';
+            if missing the default is the current date,
+            
+        naifid (integer): JPL's NAIF object ID number to more precisely 
+            identify the moving object.
+        
+        cookiepath (string): a cookie file path obtained via login method, only
+                             required for querying the proprietary KOA data.
+        
+        datatype (string): "image", "spec", or "both" -- to search for either
+            the image data, the spectra data, or both; default is "both",
+        
+        submitmode (string): "async" or  "sync" -- to receive the returned
+            data synchronously or asynchronously; default is "async",
+        
+        graphoption (integer): 0 or 1 -- indicates whether to create graphic 
+            png files of moving object tracjectories; default is 1,
+
+        orbitalinput (int): 0 or 1 indicates whether the precise orbital 
+            input parameters are provided,
+       
+        The orbital input contains the following parameters:
+    
+            epoch (mjd),  
+	    ec (eccentricity),
+	    om (deg): longitude of ascending node, 
+	    w (deg) : argument of perihelion,
+	    in (deg): inclination,
+	  
+            qr (au) (perihelion distance -- for Comet),
+	    tp (JD) (perihelion Julian date -- for Comet),
+        
+            or 
+        
+            a (au):   semi-major axis -- for Asteroid,
+	    m0 (deg):  mean anomaly -- for Asteroid
+
+
+        where the notations are consistent with the inputs to the JPL's url
+        for obtaining bsp file which constains the object's SPK ID:
+
+	    -EPOCH: epoch, 
+	    -EC:    eccentricity,
+	    -OM:    longitude of ascending node,
+            -W:     argument of perihelion,	
+	    -IN:    inclination,
+	    -QR:    perihelion distance,
+	    -TP:    perihelion Julian date,
+
+        
+        Calling synopsis:
+	----------------
+        e.g. 
+            Koa.query_moving_object ( \
+                instrument = 'nirspec', \
+                object = 'pluto', \
+                startdate = '1995-01-01', \
+                enddate = '2020-07-08', \
+                outpath = './nirspec_pluto.json', \
+                naifid = '999', \
+                datatype = 'both', \
+                submitmode = 'async', \
+                graphoption = 1)
+        """
+       
+        debug = 0
+        debugfname = ''
+        if ('debugfile' in kwargs):
+            
+            debug = 1
+            debugfname = kwargs.get ('debugfile')
+
+            if (len(debugfname) > 0):
+      
+                logging.basicConfig (filename=debugfname, \
+                    level=logging.DEBUG)
+    
+                with open (debugfname, 'w') as fdebug:
+                    pass
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('Enter query_moving_object:')
+       
+        instrument = ''
+        if ('instrument' in kwargs): 
+            instrument = str(kwargs.get('instrument'))
+
+        if (len(instrument) == 0):
+            print ('Failed to find required parameter: instrument')
+            return
+
+        object = ''
+        if ('object' in kwargs): 
+            object = str(kwargs.get('object'))
+
+        if (len(object) == 0):
+            print ('Failed to find required parameter: object')
+            return
+
+        outpath = ''
+        if ('outpath' in kwargs): 
+            outpath = str(kwargs.get('outpath'))
+        
+        if (len(outpath) == 0):
+            print ('Failed to find required parameter: outpath')
+            return
+
+        startdate = ''
+        if ('startdate' in kwargs): 
+            startdate = str(kwargs.get('startdate'))
+
+        if (len(startdate) == 0):
+            print ('Failed to find required parameter: startdate')
+            return
+
+        enddate = ''
+        if ('enddate' in kwargs): 
+            enddate = str(kwargs.get('enddate'))
+
+        if (len(enddate) == 0):
+            today = date.today()
+            enddate = today.strftime ("%Y-%m-%d")
+        
+            if debug:
+                logging.debug ('')
+                logging.debug (f'today= {enddate:s}')
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'instrument= {instrument:s}')
+            logging.debug (f'object= {object:s}')
+            logging.debug (f'outpath= {outpath:s}')
+            logging.debug (f'startdate= {startdate:s}')
+            logging.debug (f'enddate= {enddate:s}')
+
+        cookiepath = ''
+        if ('cookiepath' in kwargs): 
+            cookiepath = kwargs.get('cookiepath')
+
+        naifid = '' 
+        if ('naifid' in kwargs): 
+            naifid = str (kwargs.get('naifid'))
+
+        datatype = ''
+        if ('datatype' in kwargs): 
+            datatype = str (kwargs.get('datatype'))
+
+        submitmode = ''
+        if ('submitmode' in kwargs): 
+            submitmode = str (kwargs.get('submitmode'))
+
+        graphoption = 1 
+        if ('graphoption' in kwargs): 
+            graphoption = int (kwargs.get('graphoption'))
+
+        orbitalinput = 0 
+        if ('orbitalinput' in kwargs): 
+            orbitalinput = int (kwargs.get('orbitalinput'))
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'cookiepath= {cookiepath:s}')
+            logging.debug (f'naifid= {naifid:s}')
+            logging.debug (f'datatype= {datatype:s}')
+            logging.debug (f'submitmode= {submitmode:s}')
+            logging.debug (f'graphoption= {graphoption:d}')
+            logging.debug (f'orbitalinput= {orbitalinput:d}')
+
+        epoch = ''
+        ecstr = ''
+        omstr = ''
+        wstr = ''
+        instr = ''
+        qrstr = ''
+        tpstr = ''
+        astr = ''
+        m0str = ''
+
+        if (orbitalinput == 1):
+
+            if ('epoch' in kwargs): 
+                epoch = int (kwargs.get('epoch'))
+
+            if ('ecstr' in kwargs): 
+                ecstr = int (kwargs.get('ecstr'))
+
+            if ('omstr' in kwargs): 
+                omstr = int (kwargs.get('omstr'))
+
+            if ('wstr' in kwargs): 
+                wstr = int (kwargs.get('wstr'))
+
+            if ('instr' in kwargs): 
+                instr = int (kwargs.get('instr'))
+
+            if ('qrstr' in kwargs): 
+                qrstr = int (kwargs.get('qrstr'))
+
+            if ('tpstr' in kwargs): 
+                tpstr = int (kwargs.get('tpstr'))
+
+            if ('astr' in kwargs): 
+                astr = int (kwargs.get('astr'))
+
+            if ('m0str' in kwargs): 
+                m0str = int (kwargs.get('m0str'))
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'epoch= {epoch:s}')
+                logging.debug (f'ecstr= {ecstr:s}')
+                logging.debug (f'omstr= {omstr:s}')
+                logging.debug (f'wstr= {wstr:s}')
+                logging.debug (f'instr= {instr:s}')
+                logging.debug (f'qrstr= {qrstr:s}')
+                logging.debug (f'tpstr= {tpstr:s}')
+                logging.debug (f'astr= {astr:s}')
+                logging.debug (f'm0str= {m0str:s}')
+
+#
+#    retrieve baseurl from conf class;
+#
+        baseurl = conf.server
+
+        if ('server' in kwargs):
+            baseurl = kwargs.get ('server')
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {baseurl:s}')
+
+
+        moss_url = baseurl + 'cgi-bin/MossAPI/nph-mossSearch?'
+
+        param = dict()
+        param['instrument'] = instrument
+        param['target'] = object
+        param['starttime'] = startdate
+        param['endtime'] = enddate
+        
+        if (len(naifid) > 0):
+            param['naifid'] = naifid
+        
+        if (len(datatype) > 0):
+            param['datatype'] = datatype
+        
+        if (len(submitmode) > 0):
+            param['submitmode'] = submitmode
+        
+        param['graphoption'] = graphoption 
+        
+        param['orbitalinput'] = orbitalinput
+        
+        if (orbitalinput == 1):
+
+            param['epoch'] = epoch
+            param['ec'] = ecstr
+            param['om'] = omstr
+            param['w'] = wstr
+            param['in'] = instr
+            param['qr'] = qrstr
+            param['tp'] = tpstr
+            param['a'] = astr
+            param['m0'] = m0str
+
+#
+#    These are for development debug only; take them out before release
+#
+        param ['debug'] = '/home/mihseh/MossAPI/src/nirc2_pluto.debug'
+        param ['workspace'] = 'MossUrlTest'
+
+        data = urllib.parse.urlencode (param)
+
+        url = moss_url + data 
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'url= {url:s}')
+
+#
+#    load cookie
+#
+        cookiejar = None
+        
+        if (len(cookiepath) > 0):
+   
+            cookiejar = http.cookiejar.MozillaCookieJar (cookiepath)
+
+            try: 
+                cookiejar.load (ignore_discard=True, ignore_expires=True)
+    
+                if debug:
+                    logging.debug (\
+                        f'cookie loaded from file: {cookiepath:s}')
+        
+                for cookie in cookiejar:
+                    
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('cookie=')
+                        logging.debug (cookie)
+                        logging.debug (f'cookie.name= {cookie.name:s}')
+                        logging.debug (f'cookie.value= {cookie.value:s}')
+                        logging.debug (f'cookie.domain= {cookie.domain:s}')
+
+            except Exception as e:
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'loadCookie exception: {str(e):s}')
+                pass
+
+#
+#    send query in async mode and loop until done
+#
+        response = None
+        try:
+            if (cookiejar is not None):
+        
+                response = requests.post (moss_url, data=param, \
+	            cookies=cookiejar, allow_redirects=False)
+                
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('request sent with cookiejar')
+
+            else: 
+                response = requests.post (moss_url, data= param, \
+	            allow_redirects=False)
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('request sent without cookiejar')
+
+        except Exception as e:
+           
+            status = 'error'
+            msg = str(e)
+	    
+            if debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+           
+            print (msg)
+            return
+
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'status_code= {response.status_code:d}')
+            logging.debug ('response: ')
+            logging.debug (response)
+            logging.debug (response.text)
+            logging.debug ('response.headers: ')
+            logging.debug (response.headers)
+            logging.debug ('')
+            logging.debug (f'status_code= {response.status_code:d}')
+
+
+#
+# {  if response is a json structure: parse for status;
+#    or if it is a HTTP error, then it is text: just print the message
+#
+        jsondata = None
+        status = ''
+        msg = ''
+           
+        content_type = ''
+        try:
+            content_type = response.headers['Content-type']
+        except Exception as e:
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'exception extract content-type: {str(e):s}')
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'content_type= {content_type:s}')
+
+        
+        if (content_type == 'application/json'):
+                
+            if debug:
+                logging.debug ('')
+                logging.debug ('case json errmsg:')
+      
+            try:
+                jsondata = response.json()
+                status = jsondata['status']
+                    
+            except Exception as e:
+                
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'JSON object parse error: {str(e):s}')
+      
+                status = 'error'
+                msg = 'JSON parse error: ' + str(e)
+                
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'status= {status:s}')
+                    logging.debug (f'msg= {msg:s}')
+
+                print (response.text)
+                return
+
+
+        else:
+            print (response.text)
+            return
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('here')
+            logging.debug (f'status= {status:s}')
+
+
+#
+#} end extract status from json structure
+#
+
+        if (status.lower() == 'error'):
+#
+#    retrieve error message and return
+#
+            msg = jsondata['msg']
+            print (msg)
+            return
+        
+        elif (status.lower() == 'executing'):
+#
+#    retrieve statusurl, and retrieve status in a loop 
+#    until status is 'completed' or 'error'
+#
+            statusurl = jsondata['statusurl']
+            
+            while ((status.lower() != 'completed') and \
+                (status.lower() != 'error')):
+                
+                time.sleep (2)
+                jsondata = self.__get_moss_status (statusurl, debug=1)
+       
+                status = jsondata['status']
+
+                if debug:
+                    logging.debug ('')
+                    #logging.debug (f'jsondata= ')
+                    #logging.debug (jsondata)
+                    logging.debug (f'status= {status:s}')
+             
+        if debug:
+            logging.debug ('')
+            logging.debug (f'out of while loop: status= {status:s}')
+       
+        
+        if (status.lower() == 'error'):
+#
+#    retrieve error message and return
+#
+            msg = jsondata['msg']
+            print (msg)
+            return
+        
+        elif (status.lower() == 'completed'):
+#
+#    retrieve resulturl and retrieve resultfile
+#
+            resulturl = jsondata['resulturl']
+        
+            if debug:
+                logging.debug ('')
+                logging.debug (f'resulturl= {resulturl:s}')
+       
+            try:
+                self.__get_moss_resultfile (resulturl, outpath) 
+                
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('returned __get_moss_resultfile')
+             
+            except Exception as e:
+           
+                if debug:
+                    logging.debug ('')
+                    logging.debug (
+                        f'Exception error get_moss_resultfile: {str(e):s}')
+                print (str(e))
+                return
+
+#
+#} end Archive.query_moving_object
+#
+
+    
+    
+    def __get_moss_resultfile (self, resulturl, outpath, **kwargs):
+#
+#{ Archive.__get_moss_resultfile
+#
+        response = None
+        status = ''
+        msg = ''
+        
+        debug = 0 
+
+#
+#   send resulturl to retrieve result table
+#
+        try:
+            response = requests.get (resulturl, stream=True)
+        
+            if debug:
+                logging.debug ('')
+                logging.debug ('resulturl request sent')
+
+        except Exception as e:
+           
+            status = 'error'
+            msg = str(e)
+	    
+            if debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+            
+            raise Exception (msg)    
+     
+       
+#
+# save table to file
+#
+        if debug:
+            logging.debug ('')
+            logging.debug ('save data to outpath')
+
+        try:
+            fp = open (outpath, "wb")
+        
+        except Exception as e:
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'save_data error: {str(e):s}')
+            
+            msg = 'Failed to open file [' + outpath + '] for write.'
+            raise Exception (msg)    
+
+        try:
+            for data in response.iter_content(4096):
+                
+                len_data = len(data)            
+        
+                if (len_data < 1):
+                    break
+
+                fp.write (data)
+        
+            fp.close()
+
+        except Exception as e:
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'save_data error: {str(e):s}')
+            
+            self.msg = 'save_data error: ' + str(e)
+            raise Exception (msg)    
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'data written to file: {outpath:s}')
+                
+        msg = 'Result downloaded to file [' + outpath + ']'
+        print (msg)
+        return
+
+#
+#} end Archive.query_moving_object
+#
+
+
+    def __get_moss_status (self, statusurl, **kwargs):
+#
+#{ Archive.__get_moss_status
+#
+        status = ''
+        msg = ''
+
+        debug = 0
+        
+        if debug:
+            logging.debug ('')
+            logging.debug ('Enter Koa.__get_moss_status:')
+
+#
+#    get status from statusurl
+#
+        response = None
+        try:
+            response = requests.get (statusurl, stream=True)
+            
+            if debug:
+                logging.debug ('')
+                logging.debug ('statusurl request sent')
+
+        except Exception as e:
+           
+            msg = str(e)
+	    
+            if debug:
+                logging.debug ('')
+                logging.debug (f'exception: e= {str(e):s}')
+            
+            raise Exception (msg)    
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('statusurl response returned')
+            logging.debug ('response= ')
+            logging.debug (response)
+       
+        jsondata = None
+        try:
+            jsondata = response.json()
+                    
+        except Exception as e:
+                
+            if debug:
+                logging.debug ('')
+                logging.debug (f'JSON object parse error: {str(e):s}')
+      
+            status = 'error'
+            msg = 'JSON parse error: ' + str(e)
+                
+            raise Exception (msg)    
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'status= {status:s}')
+                logging.debug (f'msg= {msg:s}')
+
+        #status = jsondata['status']
+        return (jsondata)
+        
+#
+#} end Archive.__get_moss_status
+#
+
+
+
     def print_data (self):
 #
 #{ Archive.print_date
 #
 
-
         if self.debug:
             logging.debug ('')
-            logging.debug ('Enter koa.print_data:')
+            logging.debug ('Enter Koa.print_data:')
 
         try:
             self.tap.print_data ()
