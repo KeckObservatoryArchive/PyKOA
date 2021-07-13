@@ -1,0 +1,11 @@
+language: python
+  
+services:
+  - docker
+
+install:
+  - docker build --tag pykoa .
+
+script:
+  - docker run --env TRAVIS_JOB_ID=$TRAVIS_JOB_ID pyneid
+
