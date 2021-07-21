@@ -1473,11 +1473,22 @@ class Archive:
 
         startdate (string): a date string in the format of 'yyyy-mm-dd'
 
-        outpath (string): a full output filepath for the returned json file
-            which contains moving object files and if the 'graph option' is
-            set to 1, the return file also include the png file showing
-            moving object's trajectories.
-    
+        outdir (string): a full output directory path for the returned 
+            'result json file', 'object metadata file', and the 
+            optional 'graph metadata file' where
+            
+            result json file -- contains the links and the contents of 
+                moving object's metadata files and graph metadata files,  
+            
+            moving object metadata file -- an IPAC ascii format file containing
+                the same metadata infomation as one of the object metadata files
+                in the result json file,
+
+            graph metadata file (optional)-- an IPAC ascii format file 
+                containing the same metadata infomation as one of the 
+                graph metadata files in the result json file; this file 
+                contains links to png file showing moving object's trajectories.
+
         
         Optional inputs:
 	----------------
@@ -1977,6 +1988,300 @@ class Archive:
 #
 
     
+    def download_moving_object_metadata (self, jsonpath, outdir, **kwargs):
+#
+#{ Archive.download_moving_object_metadata
+#
+        """
+        'download_moving_object_metadata' method downloads moving object 
+        search's result metadata files and  heir associated graph metadata 
+        files if the graph option is chosen.  
+        
+        The metadata files contain the parameters and URL link of the KOA data 
+        that are moving objects; and the graph metadata files contains the
+        information (ra, dec, mjd) of moving objects tractory and the links to
+        the graph PNG files.  These metafiles are in IPAC ascii format.
+
+        Required input:
+	----------------
+	jsonpath (string): The full path of result json file obtained from 
+            running 'query_moving_object' methods,    
+       
+        outdir (string): directory for the returned files,
+        """
+
+        debug = 0
+        debugfname = ''
+        if ('debugfile' in kwargs):
+            
+            debug = 1
+            debugfname = kwargs.get ('debugfile')
+
+            if (len(debugfname) > 0):
+      
+                logging.basicConfig (filename=debugfname, \
+                    level=logging.DEBUG)
+    
+                with open (debugfname, 'w') as fdebug:
+                    pass
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('Enter download_moving_object_metadata:')
+            logging.debug (f'outdir= {outdir:s}')
+       
+        
+        self.baseurl = conf.server
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+
+#
+#    if 'outidr' doesn't exist, create the directory,
+#
+#    decimal mode work for both python2.7 and python3;
+#
+#    0755 also works for python 2.7 but not python3
+#  
+#    convert octal 0775 to decimal: 493 
+#
+        d1 = int ('0775', 8)
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'd1= {d1:d}')
+     
+        try:
+            os.makedirs (outdir, mode=d1, exist_ok=True) 
+
+        except Exception as e:
+            
+            msg = f'Failed to create {outdir:s}: {str(e):s}'
+            print (msg)
+            return
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('returned os.makedirs') 
+
+#
+#    parse input json file for parameters
+#
+        fp = None
+        jsondata = None
+        try:
+            if debug:
+                logging.debug ('')
+                logging.debug ('here0-0') 
+
+            with open (jsonpath) as fp:
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('here0-1') 
+
+                jsondata = json.load (fp)
+            
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('here0-2') 
+        
+            if debug:
+                logging.debug ('')
+                logging.debug ('here0-3') 
+            
+            fp.close()
+
+            if debug:
+                logging.debug ('')
+                logging.debug ('here0-4') 
+            
+        except Exception as e:
+
+            if debug:
+                logging.debug ('')
+                logging.debug ('here1-0') 
+            
+            if (fp is not None):
+                fp.close()
+            
+            if debug:
+                logging.debug ('')
+                logging.debug ('here1-1') 
+
+            msg = 'Failed to read ' + jsonpath
+            print (msg)
+            if debug:
+                logging.debug ('')
+                logging.debug ('here1-2') 
+
+            return
+
+        
+        if debug:
+            logging.debug ('')
+            logging.debug ('jsondata: ') 
+            logging.debug (jsondata) 
+
+        urlprefix = jsondata['urlprefix']
+        if debug:
+            logging.debug ('')
+            logging.debug (f'urlprefix= {urlprefix:s}') 
+
+        results = jsondata['results']
+        if debug:
+            logging.debug ('')
+            logging.debug ('results: ') 
+            logging.debug (results) 
+
+        nresulttbl = int(results['nresulttbl'])
+        ngraphtbl = int(results['ngraphtbl'])
+        
+        if debug:
+            logging.debug ('')
+            logging.debug (f'nresulttbl= {nresulttbl:d}') 
+            logging.debug (f'nesulttbl= {ngraphtbl:d}') 
+
+#
+#    download result metadata tables
+#
+        baseurl = ''
+        len_baseurl = len(self.baseurl)
+        if (self.baseurl[len_baseurl-1] == '/'):
+            baseurl = self.baseurl[0:len_baseurl-1]
+        else:
+            baseurl = self.baseurl
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {baseurl:s}') 
+
+        if (nresulttbl > 0):
+        
+            for l in range (0, nresulttbl):
+           
+                fileurl = jsondata['results']['resulttbls'][l]['fileurl']
+        
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'fileurl= {fileurl:s}') 
+
+                resultfile = ''
+                ind = fileurl.rfind ('/')
+                if (ind >= 0):
+                    resultfile = fileurl[ind+1:]
+                
+                resultpath = outdir + '/' + resultfile
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'resultfile= {resultfile:s}') 
+                    logging.debug (f'resultpath= {resultpath:s}') 
+
+                url = baseurl + fileurl
+            
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'url= {url:s}') 
+
+                try:
+                    self.__get_moss_resultfile (url, resultpath)
+                
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('returned __get_moss_resultfile') 
+
+                except Exception as e:
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'get resultfile exception: {str(e):s}') 
+
+
+#
+#    download result metadata tables
+#
+        if (ngraphtbl > 0):
+
+            for l in range (0, nresulttbl):
+           
+                fileurl = \
+                    jsondata['results']['graphtbls'][l]['graphfileurl']
+        
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'fileurl= {fileurl:s}') 
+
+                resultfile = ''
+                ind = fileurl.rfind ('/')
+                if (ind >= 0):
+                    resultfile = fileurl[ind+1:]
+                
+                resultpath = outdir + '/' + resultfile
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'resultfile= {resultfile:s}') 
+                    logging.debug (f'resultpath= {resultpath:s}') 
+
+                url = baseurl + fileurl
+            
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'url= {url:s}') 
+
+                try:
+                    self.__get_moss_resultfile (url, resultpath)
+                
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('returned __get_moss_resultfile') 
+
+                except Exception as e:
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'get resultfile exception: {str(e):s}') 
+
+        return
+
+#
+#} end Archive.download_moving_object_metadata
+#
+
+    
+    def __get_moss_resultfile (self, resulturl, outpath, **kwargs):
+#
+#{ Archive.__get_moss_resultfile
+#
+        response = None
+
+
+        return
+
+
+
+
+
+
+#
+#} end Archive.download_moving_object_metadata
+#
+
+    
+#
+#{ Archive.download_moss_resultfiles (self, 
+#
+        """
+        
+        """
+#
+#} end Archive.download_moss_resultfiles
+#
+
     
     def __get_moss_resultfile (self, resulturl, outpath, **kwargs):
 #
@@ -2059,7 +2364,7 @@ class Archive:
         return
 
 #
-#} end Archive.query_moving_object
+#} end Archive.__get_moss_resultfile
 #
 
 
