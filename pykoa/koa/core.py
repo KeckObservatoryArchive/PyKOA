@@ -1650,6 +1650,10 @@ class Archive:
             if (self.colnames[i].lower() == 'instrume'):
                 self.ind_instrume = i
 
+            if (self.ind_instrume == -1):
+                if (self.colnames[i].lower() == 'instrument'):
+                    self.ind_instrume = i
+
             if (self.colnames[i].lower() == 'koaid'):
                 self.ind_koaid = i
 
