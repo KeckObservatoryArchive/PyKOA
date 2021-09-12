@@ -1830,7 +1830,17 @@ class Archive:
             ind = instrument.find ('LRIS')
             if (ind >= 0):
                 instrument = 'LRIS'
-  
+ 
+            ind = -1
+            ind = instrument.find ('LRIS')
+            if (ind >= 0):
+                instrument = 'LRIS'
+ 
+            ind = -1
+            ind = instrument.find ('NIRS')
+            if (ind >= 0):
+                instrument = 'NIRSPEC'
+
             if self.debug:
                 logging.debug ('')
                 logging.debug (f'l= {l:d} koaid= {koaid:s}')
