@@ -1505,9 +1505,6 @@ class Archive:
         datatype (string): "image", "spec", or "both" -- to search for either
             the image data, the spectra data, or both; default is "both",
         
-        submitmode (string): "async" or  "sync" -- to receive the returned
-            data synchronously or asynchronously; default is "async",
-        
         graphoption (integer): 0 or 1 -- indicates whether to create graphic 
             png files of moving object tracjectories; default is 1,
 
@@ -1554,7 +1551,6 @@ class Archive:
                 outpath = './nirspec_pluto.json', \
                 naifid = '999', \
                 datatype = 'both', \
-                submitmode = 'async', \
                 graphoption = 1)
         """
        
@@ -1641,10 +1637,6 @@ class Archive:
         if ('datatype' in kwargs): 
             datatype = str (kwargs.get('datatype'))
 
-        submitmode = ''
-        if ('submitmode' in kwargs): 
-            submitmode = str (kwargs.get('submitmode'))
-
         graphoption = 1 
         if ('graphoption' in kwargs): 
             graphoption = int (kwargs.get('graphoption'))
@@ -1658,7 +1650,6 @@ class Archive:
             logging.debug (f'cookiepath= {cookiepath:s}')
             logging.debug (f'naifid= {naifid:s}')
             logging.debug (f'datatype= {datatype:s}')
-            logging.debug (f'submitmode= {submitmode:s}')
             logging.debug (f'graphoption= {graphoption:d}')
             logging.debug (f'orbitalinput= {orbitalinput:d}')
 
@@ -1740,9 +1731,6 @@ class Archive:
         if (len(datatype) > 0):
             param['datatype'] = datatype
         
-        if (len(submitmode) > 0):
-            param['submitmode'] = submitmode
-        
         param['graphoption'] = graphoption 
         
         param['orbitalinput'] = orbitalinput
@@ -1760,7 +1748,8 @@ class Archive:
             param['m0'] = m0str
 
 #
-#    These are for development debug only; take them out before release
+#    These two parameters are for development debugging during development only;
+#    take them out before release.
 #
         param ['debug'] = '/home/mihseh/MossAPI/src/nirc2_pluto.debug'
         param ['workspace'] = 'MossUrlTest'
@@ -1995,13 +1984,18 @@ class Archive:
 #
         """
         'download_moving_object_metadata' method downloads moving object 
-        search's result metadata files and  heir associated graph metadata 
-        files if the graph option is chosen.  
+        search's result metadata tables files and their optional associated 
+        graph files.
         
-        The metadata files contain the parameters and URL link of the KOA data 
-        that are moving objects; and the graph metadata files contains the
-        information (ra, dec, mjd) of moving objects tractory and the links to
-        the graph PNG files.  These metafiles are in IPAC ascii format.
+        The result metadata tables contain the parameters and URL links of 
+        KOA's data; this table can be used as the input to 'download' method
+        for downloading KOA moving objects.
+        
+        The graph metadata table contains the information of these KOA data 
+        detected in the moving object's trajectory and the links to the graph 
+        PNG files for visualization.
+    
+        The result metadata tables are all in IPAC ascii format.
 
         Required input:
 	----------------
@@ -2009,6 +2003,12 @@ class Archive:
             running 'query_moving_object' methods,    
        
         outdir (string): directory for the returned files,
+        
+        Optional input:
+	----------------
+        pngflag (0 or 1): default is 1 indicating that PNG files will be downloaded; 
+                          0 to supress downloading PNG files.
+        
         """
 
         debug = 0
@@ -2031,17 +2031,29 @@ class Archive:
             logging.debug ('Enter download_moving_object_metadata:')
             logging.debug (f'outdir= {outdir:s}')
        
-        
+        if (len (outdir) == 0):
+            msg = 'Required input parameter outdir is an empty string'  
+            print (msg)    
+            return 
+
         self.baseurl = conf.server
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'baseurl= {self.baseurl:s}')
 
+        pngflag = 1 
+        if ('pngflag' in kwargs):
+            pngflag = int(kwargs.get ('pngflag'))
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'pngflag= {pngflag:d}')
+
 #
-#    if 'outidr' doesn't exist, create the directory,
+#    if 'outdirr' doesn't exist, create the directory,
 #
 #    decimal mode work for both python2.7 and python3;
 #
@@ -2113,7 +2125,7 @@ class Archive:
                 logging.debug ('')
                 logging.debug ('here1-1') 
 
-            msg = 'Failed to read ' + jsonpath
+            msg = 'Failed to read input JSON file: ' + jsonpath
             print (msg)
             if debug:
                 logging.debug ('')
@@ -2162,7 +2174,7 @@ class Archive:
 
         if (nresulttbl > 0):
         
-            for l in range (0, nresulttbl):
+            for l in range (nresulttbl):
            
                 fileurl = jsondata['results']['resulttbls'][l]['fileurl']
         
@@ -2189,7 +2201,7 @@ class Archive:
                     logging.debug (f'url= {url:s}') 
 
                 try:
-                    self.__get_moss_resultfile (url, resultpath)
+                    self.__get_moss_resultfile (url, resultpath, debug=1)
                 
                     if debug:
                         logging.debug ('')
@@ -2203,11 +2215,11 @@ class Archive:
 
 
 #
-#    download result metadata tables
+#    download graph metadata tables
 #
         if (ngraphtbl > 0):
 
-            for l in range (0, nresulttbl):
+            for l in range (ngraphtbl):
            
                 fileurl = \
                     jsondata['results']['graphtbls'][l]['graphfileurl']
@@ -2216,17 +2228,17 @@ class Archive:
                     logging.debug ('')
                     logging.debug (f'fileurl= {fileurl:s}') 
 
-                resultfile = ''
+                graphfile = ''
                 ind = fileurl.rfind ('/')
                 if (ind >= 0):
-                    resultfile = fileurl[ind+1:]
+                    graphfile = fileurl[ind+1:]
                 
-                resultpath = outdir + '/' + resultfile
+                graphpath = outdir + '/' + graphfile
 
                 if debug:
                     logging.debug ('')
-                    logging.debug (f'resultfile= {resultfile:s}') 
-                    logging.debug (f'resultpath= {resultpath:s}') 
+                    logging.debug (f'graphfile= {graphfile:s}') 
+                    logging.debug (f'graphpath= {graphpath:s}') 
 
                 url = baseurl + fileurl
             
@@ -2235,7 +2247,7 @@ class Archive:
                     logging.debug (f'url= {url:s}') 
 
                 try:
-                    self.__get_moss_resultfile (url, resultpath)
+                    self.__get_moss_resultfile (url, graphpath, debug=1)
                 
                     if debug:
                         logging.debug ('')
@@ -2245,42 +2257,79 @@ class Archive:
 
                     if debug:
                         logging.debug ('')
-                        logging.debug (f'get resultfile exception: {str(e):s}') 
+                        logging.debug (f'get graphfile exception: {str(e):s}') 
+
+#
+#    if pngflag = 1: download graphic PNG files
+#
+                if pngflag:
+
+                    ind = -1
+                    ind = url.rfind('/')
+                    
+                    url_prefix = url[0:ind]
+                    
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('hrere0')
+                        logging.debug (f'url_prefix= {url_prefix:s}') 
+
+                    nrecstr = jsondata['results']['graphtbls'][l]['nrec']
+                    nrec = int(nrecstr)
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'nrec= {nrec:d}') 
+                   
+                    """
+                    ipng = 0
+                    pngfile = \
+                        jsondata['results']['graphtbls'][l]['metadata'][ipng]['pngfile']
+
+                    pngurl = url_prefix + '/' + pngfile
+                    pngpath = outdir + '/' + pngfile
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'ipng= {ipng:d}')
+                        logging.debug (f'pngfile= {pngfile:s}') 
+                        logging.debug (f'pngpath= {pngpath:s}') 
+                        logging.debug (f'pngurl= {pngurl:s}') 
+                    """
+                   
+                    for ipng in range (nrec):
+
+                        pngfile = \
+                            jsondata['results']['graphtbls'][l]['metadata'][ipng]['pngfile']
+                        
+                        pngurl = url_prefix + '/' + pngfile
+                        pngpath = outdir + '/' + pngfile
+
+
+                        if debug:
+                            logging.debug ('')
+                            logging.debug (f'ipng= {ipng:d}')
+                            logging.debug (f'pngfile= {pngfile:s}') 
+                            logging.debug (f'pngpath= {pngpath:s}') 
+                            logging.debug (f'pngurl= {pngurl:s}') 
+
+                        try:
+                            self.__get_moss_resultfile (pngurl, pngpath, debug=1)
+                
+                            if debug:
+                                logging.debug ('')
+                                logging.debug ('returned __get_moss_resultfile') 
+
+                        except Exception as e:
+
+                            if debug:
+                                logging.debug ('')
+                                logging.debug (f'get pngfile exception: {str(e):s}') 
 
         return
 
 #
 #} end Archive.download_moving_object_metadata
-#
-
-    
-    def __get_moss_resultfile (self, resulturl, outpath, **kwargs):
-#
-#{ Archive.__get_moss_resultfile
-#
-        response = None
-
-
-        return
-
-
-
-
-
-
-#
-#} end Archive.download_moving_object_metadata
-#
-
-    
-#
-#{ Archive.download_moss_resultfiles (self, 
-#
-        """
-        
-        """
-#
-#} end Archive.download_moss_resultfiles
 #
 
     
@@ -2293,6 +2342,9 @@ class Archive:
         msg = ''
         
         debug = 0 
+
+        if ('debug' in kwargs):
+            debug = int(kwargs.get ('debug'))
 
 #
 #   send resulturl to retrieve result table
@@ -2378,6 +2430,9 @@ class Archive:
 
         debug = 0
         
+        if ('debug' in kwargs):
+            debug = int(kwargs.get ('debug'))
+
         if debug:
             logging.debug ('')
             logging.debug ('Enter Koa.__get_moss_status:')
@@ -2642,7 +2697,7 @@ class Archive:
         self.ind_instrume = -1
         self.ind_koaid = -1
         self.ind_filehand = -1
-        for i in range (0, self.len_col):
+        for i in range (self.len_col):
 
             if (self.colnames[i].lower() == 'instrume'):
                 self.ind_instrume = i
@@ -2726,7 +2781,7 @@ class Archive:
      
 
 #
-#    create outdir if it doesn't exist
+#    create outdir for lev0, lev1, calib data if it doesn't exist
 #
 #    decimal mode work for both python2.7 and python3;
 #
@@ -2739,21 +2794,64 @@ class Archive:
         if self.debug:
             logging.debug ('')
             logging.debug (f'd1= {d1:d}')
-     
+#
+#    lev0 subdir 
+#
+        outdir_lev0 = ''
+        outdir_lev1 = ''
+        outdir_calib = ''
         try:
-            os.makedirs (self.outdir, mode=d1, exist_ok=True) 
+            outdir_lev0 = self.outdir + '/lev0'
+            os.makedirs (outdir_lev0, mode=d1, exist_ok=True) 
 
         except Exception as e:
             
-            self.msg = f'Failed to create {self.outdir:s}: {str(e):s}'
+            self.msg = f'Failed to create {outdir:s}: {str(e):s}'
             print (self.msg)
             return
             #sys.exit()
 
         if self.debug:
             logging.debug ('')
-            logging.debug ('returned os.makedirs') 
+            logging.debug ('returned os.makedirs for lev0 data subdir') 
 
+#
+#    lev1 subdir 
+#
+        if (lev1file == 1):
+            
+            try:
+                outdir_lev1 = self.outdir + '/lev1'
+                os.makedirs (outdir_lev1, mode=d1, exist_ok=True) 
+
+            except Exception as e:
+            
+                self.msg = f'Failed to create {outdir:s}: {str(e):s}'
+                print (self.msg)
+                return
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('returned os.makedirs for lev1 data subdir') 
+
+#
+#    calib subdir 
+#
+        if (calibfile == 1):
+            
+            try:
+                outdir_calib = self.outdir + '/calibfiles'
+                os.makedirs (outdir_calib, mode=d1, exist_ok=True) 
+
+            except Exception as e:
+            
+                self.msg = f'Failed to create {outdir:s}: {str(e):s}'
+                print (self.msg)
+                return
+
+            if self.debug:
+                logging.debug ('')
+                logging.debug ('returned os.makedirs for calib data subdir') 
 
 #
 #    retrieve baseurl from conf class;
@@ -2855,7 +2953,7 @@ class Archive:
             #   get lev0 files
             #
             url = self.getkoa_url + 'filehand=' + filehand
-            filepath = self.outdir + '/' + koaid
+            filepath = outdir_lev0 + '/' + koaid
                 
             if self.debug:
                 logging.debug ('')
@@ -2893,7 +2991,6 @@ class Archive:
             #
             # { if leve1file == 1   
             #
-            
                 if ((instrument.lower() != "nirc2") and \
                     (instrument.lower() != "osiris") and \
                     (instrument.lower() != "lws") and \
@@ -2901,89 +2998,169 @@ class Archive:
                     (instrument.lower() != "nirspec")):
                     
                     print (f'Instrument [{instrument:s}] does not have level1 data.')
-            #
-            #  get lev1 list 
-            #
-                if self.debug:
-                    logging.debug ('')
-                    logging.debug ('lev1file=1: downloading lev1list')
+                else:
+                #
+                # { get lev1 list 
+                #
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug ('lev1file=1: downloading lev1list')
 	  
 
-                self.lev1list_url = self.baseurl \
-                    + 'cgi-bin/KoaAPI/nph-getL1list?'
+                    self.lev1list_url = self.baseurl \
+                        + 'cgi-bin/KoaAPI/nph-getL1list?'
       
-                koaid_base = '' 
-                ind = -1
-                ind = koaid.rfind ('.')
-                if (ind > 0):
-                    koaid_base = koaid[0:ind]
-                else:
-                    koaid_base = koaid
+                    koaid_base = '' 
+                    ind = -1
+                    ind = koaid.rfind ('.')
+                    if (ind > 0):
+                        koaid_base = koaid[0:ind]
+                    else:
+                        koaid_base = koaid
 
-                if self.debug:
-                    logging.debug ('')
-                    logging.debug (f'koaid_base= {koaid_base:s}')
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug (f'koaid_base= {koaid_base:s}')
 	    
-                lev1list = self.outdir + '/' + koaid_base + '.lev1list.json'
+                    lev1list = outdir_lev1 + '/' + koaid_base + '.lev1list.json'
                 
-                if self.debug:
-                    logging.debug ('')
-                    logging.debug (f'lev1list= {lev1list:s}')
-
-                isExist = os.path.exists (lev1list)
-	    
-                if (not isExist):
-
                     if self.debug:
                         logging.debug ('')
-                        logging.debug ('downloading lev1files')
+                        logging.debug (f'lev1list= {lev1list:s}')
+
+                    isExist = os.path.exists (lev1list)
 	    
-                    url = self.lev1list_url \
-                        + 'instrument=' + instrument \
-                        + '&koaid=' + koaid \
-                        + '&filehand=' + filehand
+                    if (not isExist):
 
-
-                    if self.debug:
-                        logging.debug ('')
-                        logging.debug (f'lev1list url= {url:s}')
-
-                    try:
-                        self.__submit_request (url, lev1list, cookiejar)
-                        self.nlev1list = self.nlev1list + 1
-
-                        self.msg =  'Returned file written to: ' + lev1list   
-           
                         if self.debug:
                             logging.debug ('')
-                            logging.debug ('returned __submit_request')
-                            logging.debug (f'self.msg= {self.msg:s}')
+                            logging.debug ('downloading lev1files')
+	    
+                        #url = self.lev1list_url \
+                        #    + 'instrument=' + instrument \
+                        #    + '&koaid=' + koaid \
+                        #    + '&filehand=' + filehand
+
+                        url = self.lev1list_url \
+                            + 'instrument=' + instrument \
+                            + '&koaid=' + koaid \
+                            + '&filehand=' + filehand
+
+
+                        if self.debug:
+                            logging.debug ('')
+                            logging.debug (f'lev1list url= {url:s}')
+
+                        try:
+                            self.__submit_request (url, lev1list, cookiejar)
+                            self.nlev1list = self.nlev1list + 1
+
+                            self.msg =  'Returned file written to: ' + lev1list 
+           
+                            if self.debug:
+                                logging.debug ('')
+                                logging.debug ('returned __submit_request')
+                                logging.debug (f'self.msg= {self.msg:s}')
             
-                    except Exception as e:
+                        except Exception as e:
                         
-                        self.msg = 'No associated level 1 data for ' + koaid
-                        print (f'{self.msg:s}')
-                        continue 
-
-
+                            self.msg = 'Failed to get level 1 file list ' \
+                                + 'for koaid: ' + koaid
+                        
+                            print (f'{self.msg:s}')
+                            print (str(e))
+                        
+                #
+                # } end get lev1 list 
+                #
                 #
                 #    check again after lev1list is successfully downloaded, 
-                #    if lev1list exists: download lev1files
                 #     
+                
+                nlev1file = 0
+                
                 isExist = os.path.exists (lev1list)
-                                  
-                if (isExist):
+                
+                if (not isExist):
+                    self.msg = 'Failed to get level 1 data list ' \
+                        + 'for koaid: ' + koaid
+                        
+                    print (f'{self.msg:s}')
+                
+                else:
+                #     
+                #  extract koaid and nlev1file from json strcuture
+                #     
+                
+                    jsonData = None
+                    koaid = ''
+                    try:
+                        with open (lev1list) as fp:
+	    
+                            jsonData = json.load (fp) 
+                            koaid = jsonData["input"]["koaid"]
+                            nlev1file = int(jsonData["result"]["nlev1file"])
+                    
+                        fp.close() 
+                            
+                    except Exception as e:
+        
+                        if self.debug:
+                            logging.debug ('')
+                            logging.debug (f'lev1list: {lev1list:s} load error')
 
+                        self.msg = 'Failed to read ' + lev1list	
+                        print (f'{self.msg:s}')
+                        fp.close() 
+
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug (f'koaid= {koaid:s}')
+                        logging.debug (f'nlev1file= {nlev1file:d}')
+  
+                if (nlev1file == 0):
+                    
+                    if self.debug:
+                        logging.debug ('')
+                        logging.debug (f'got here:')
+                        logging.debug (f'nlev1file= {nlev1file:d}')
+  
+                    self.msg = 'No level 1 data found for koaid: [' \
+                        + koaid + ']'
+                    
+                    print (f'{self.msg:s}')
+                
+                else:   
+                #
+                # { nlev1file > 0: download lev1file
+                #
                     if self.debug:
                         logging.debug ('')
                         logging.debug ('list exist: downloading lev1files')
 
                     try:
-                        nlev1 = self.__download_lev1files ( \
-                            lev1list, cookiejar)
+                        nlev1 = self.__download_lev1files (jsonData, cookiejar)
+                    
+                        if self.debug:
+                            logging.debug ('')
+                            logging.debug ('returned __download_lev1files')
                         
                         self.ndnloaded_lev1 = self.ndnloaded_lev1 + nlev1
-                            
+                    
+                        if self.debug:
+                            logging.debug ('')
+                            logging.debug ( \
+                                f'ndnloaded_lev1= {self.ndnloaded_lev1:d}')
+                           
+                        self.msg = str(nlev1) + ' level1 files downloadded ' \
+                            + 'for koaid: [' + koaid + ']'
+
+                        if self.debug:
+                            logging.debug ('')
+                            logging.debug (f'self.msg= {self.msg:s}')
+                           
+                        print (f'{self.msg:s}')
+         
                         if self.debug:
                             logging.debug ('')
                             logging.debug ('returned __download_lev1files')
@@ -2993,13 +3170,17 @@ class Archive:
                 
                     except Exception as e:
                 
-                        self.msg = 'Error downloading files in caliblist [' + \
-                                filepath + ']: ' +  str(e)
+                        self.msg = 'Error downloading files in lev1list [' + \
+                            lev1list + ']: ' +  str(e)
+                        print (f'{self.msg:s}')
                         
                         if self.debug:
                             logging.debug ('')
                             logging.debug (f'errmsg= {self.msg:s}')
 
+                #
+                # } download lev1 files
+                #     
             # 
             #} endif (lev1file == 1):
             #
@@ -3031,7 +3212,7 @@ class Archive:
                     logging.debug ('')
                     logging.debug (f'koaid_base= {koaid_base:s}')
 	    
-                caliblist = self.outdir + '/' + koaid_base + '.caliblist.json'
+                caliblist = outdir_calib + '/' + koaid_base + '.caliblist.json'
                 
                 if self.debug:
                     logging.debug ('')
@@ -3146,90 +3327,49 @@ class Archive:
 #
     
 
-    def __download_lev1files (self, listpath, cookiejar):
+    def __download_lev1files (self, jsonData, cookiejar):
 #
 #{ Archive.__download_lev1files
 #
     
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'Enter __download_lev1files: {listpath:s}')
+        #if self.debug:
+        #    logging.debug ('')
+        #    logging.debug (f'Enter __download_lev1files: jsonData')
+        #    logging.debug (jsonData)
 
 #
 #    read input lev1list JSON file
 #
-        instrument = ''
-        koaid = ''
-        filehand = ''
-        nlev1file = 0
-        lev1subdir_prefix = ''
-        data = '' 
-
-        try:
-            with open (listpath) as fp:
-	    
-                jsonData = json.load (fp) 
-               
-                instrument = jsonData["input"]["instrument"]
-                koaid = jsonData["input"]["koaid"]
-                filehand = jsonData["input"]["filehand"]
-                nlev1file = int(jsonData["result"]["nlev1file"])
-                lev1subdir_prefix = jsonData["result"]["lev1subdir_prefix"]
+        instrument = jsonData["input"]["instrument"]
+        koaid = jsonData["input"]["koaid"]
+        filehand = jsonData["input"]["filehand"]
+        nlev1file = int(jsonData["result"]["nlev1file"])
+        lev1subdir_prefix = jsonData["result"]["lev1subdir_prefix"]
                 
-                if self.debug:
-                    logging.debug ('')
-                    logging.debug ( \
-                        f'lev1subdir_prefix= {lev1subdir_prefix:s}')
-                    logging.debug (f'instrument= {instrument:s}')
-                    logging.debug (f'koaid= {koaid:s}')
-                    logging.debug (f'filehand= {filehand:s}')
-                    logging.debug (f'nlev1file= {nlev1file:d}')
-                
-                if ((instrument.lower() == 'nirc2') or \
-                    (instrument.lower() == 'osiris') or \
-                    (instrument.lower() == 'lws')):
-                
-                    data = jsonData["result"]["lev1file"]
-                    
-                elif ((instrument.lower() == 'hires') or \
-                    (instrument.lower() == 'nirspec')):
-
-                    data = jsonData["result"]["data"]
-                    
-            fp.close() 
-
-        except Exception as e:
-        
-            if self.debug:
-                logging.debug ('')
-                logging.debug (f'lev1list: {lev1list:s} load error')
-
-            self.errmsg = 'Failed to read ' + listpath	
-	
-            fp.close() 
-            
-            raise Exception (self.errmsg)
-
-            return
-
         if self.debug:
             logging.debug ('')
-            logging.debug (f'downloadlev1files:')
+            logging.debug (f'lev1subdir_prefix= {lev1subdir_prefix:s}')
             logging.debug (f'instrument= {instrument:s}')
             logging.debug (f'koaid= {koaid:s}')
             logging.debug (f'filehand= {filehand:s}')
             logging.debug (f'nlev1file= {nlev1file:d}')
-            logging.debug (f'lev1subdir_prefixfile= {lev1subdir_prefix:s}')
+        
+        data = ''
+        if ((instrument.lower() == 'nirc2') or \
+            (instrument.lower() == 'osiris') or \
+            (instrument.lower() == 'lws')):
+                
+            data = jsonData["result"]["lev1file"]
+                    
+        elif ((instrument.lower() == 'hires') or \
+            (instrument.lower() == 'nirspec')):
+
+            data = jsonData["result"]["data"]
+                    
+        if self.debug:
+            logging.debug ('')
             logging.debug (f'data:')
             logging.debug (data)
-
-
-        if (nlev1file == 0):
-
-            self.status = 'error'	
-            self.errmsg = 'No level 1 data found in data directory.'
-	    
-            raise Exception (self.errmsg)
 
 
 #
@@ -3257,7 +3397,7 @@ class Archive:
             if self.debug:
                 logging.debug (f'nlev1file= {nlev1file:d}')
 
-            for ind in range (0, nlev1file):
+            for ind in range (nlev1file):
 
                 if self.debug:
                     logging.debug (f'downloadlev1files: ind= {ind:d}')
@@ -3269,7 +3409,7 @@ class Archive:
                     logging.debug (f'lev1file= {lev1file:s}')
                     logging.debug (f'filehand_lev1= {filehand_lev1:s}')
 
-                filepath = self.outdir + '/' + lev1file 
+                filepath = self.outdir + '/lev1/' + lev1file 
             
                 if self.debug:
                     logging.debug (f'filepath= {filepath:s}')
@@ -3339,7 +3479,8 @@ class Archive:
             url = ''
             d1 = int('0755', 8)
             nrec = 0
-            for l in range (0, nsubdir):
+            for l in range (nsubdir):
+            #for l in range (0, 1):
 
                 subdir = data[l]["subdir"] 
                 lev1files = data[l]["lev1files"] 
@@ -3349,11 +3490,13 @@ class Archive:
                     logging.debug ('')
                     logging.debug (f'l= {l:d} subdir= {subdir:s}')
                     logging.debug (f'nrec= {nrec:d}')
-                    logging.debug (f'lev1files=')
-                    logging.debug (lev1files)
+                    #logging.debug (f'lev1files=')
+                    #logging.debug (lev1files)
         
         
-                for i in range (0, nrec):
+                for i in range (nrec):
+                #for i in range (0, 1):
+
 
                     if self.debug:
                         logging.debug (f'downloadlev1files: i= {i:d}')
@@ -3419,7 +3562,7 @@ class Archive:
             
                     except Exception as e:
                 
-                        print (f'lev1 file download error: {str(e):s}')
+                        print (f'error downloading lev1 file {lev1file:s}: {str(e):s}')
 
             if self.debug:
                 logging.debug ('')
@@ -3495,7 +3638,7 @@ class Archive:
 #    retrieve koaid from caliblist json structure and download files
 #
         nrec = 0
-        for ind in range (0, nrec):
+        for ind in range (nrec):
 
             if self.debug:
                 logging.debug (f'downloadCalibfiles: ind= {ind:d}')
@@ -3514,7 +3657,7 @@ class Archive:
 #
             url = self.getkoa_url + 'filehand=' + filehand
                 
-            filepath = self.outdir + '/' + koaid
+            filepath = self.outdir + '/calib/' + koaid
                 
             if self.debug:
                 logging.debug ('')
@@ -3581,12 +3724,22 @@ class Archive:
                         logging.debug (f'cookie.domain= {cookie.domain:s}')
             
         try:
-            self.response =  requests.get (url, cookies=cookiejar, \
-                stream=True)
+            self.response =  requests.get (url, stream=True, cookies=cookiejar)
+
+            #self.response =  requests.get (url, cookies=cookiejar, \
+            #    stream=True)
 
             if self.debug:
                 logging.debug ('')
+                logging.debug ('-------------------------------------')
+                logging.debug ('URL:' + url)
+                logging.debug ('Cookiejar type:')
+                logging.debug (type(cookiejar))
+                
                 logging.debug ('request sent')
+                logging.debug ('done')
+                logging.debug ('')
+        
         
         except Exception as e:
             
@@ -3622,7 +3775,6 @@ class Archive:
             logging.debug ('headers: ')
             logging.debug (self.response.headers)
       
-      
         self.content_type = ''
         try:
             self.content_type = self.response.headers['Content-type']
@@ -3635,7 +3787,7 @@ class Archive:
         if self.debug:
             logging.debug ('')
             logging.debug (f'content_type= {self.content_type:s}')
-
+            
 
         if (self.content_type == 'application/json'):
             
@@ -5028,7 +5180,7 @@ class KoaTap:
                 logging.debug ('')
                 logging.debug (f'len_table= {len_table:d}')
        
-            for i in range (0, len_table):
+            for i in range (len_table):
 	    
                 row = self.astropytbl[i]
                 print (row)
