@@ -2006,9 +2006,8 @@ class Archive:
         
         Optional input:
 	----------------
-        pngflag (0 or 1): default is 1 indicating that PNG files will be downloaded; 
-                          0 to supress downloading PNG files.
-        
+        pngflag (0 or 1): default is 1 indicating that PNG files will be 
+                          downloaded; 0 to supress downloading PNG files.
         """
 
         debug = 0
@@ -2172,8 +2171,24 @@ class Archive:
             logging.debug ('')
             logging.debug (f'baseurl= {baseurl:s}') 
 
-        if (nresulttbl > 0):
+
+        nmeta_total = nresulttbl + ngraphtbl  
+        msg = 'Start downloading ' +  str(nmeta_total) + ' metadata tables '
         
+        if pngflag:
+            msg = msg + 'and their associated graph PNG files ' 
+        msg = msg + 'you requested;'
+        
+        print (msg)
+        print (f'please check your outdir: {outdir:s} for  progress.')
+        
+        ndnloaded_metatbl = 0
+        ndnloaded_png = 0
+
+        if (nresulttbl > 0):
+#
+# { download result metadata tables
+#
             for l in range (nresulttbl):
            
                 fileurl = jsondata['results']['resulttbls'][l]['fileurl']
@@ -2207,17 +2222,26 @@ class Archive:
                         logging.debug ('')
                         logging.debug ('returned __get_moss_resultfile') 
 
+                    #msg = 'Result metadata table downloaded to file [' + \
+                    #    resultpath + ']'
+                    #print (msg)
+                    
+                    ndnloaded_metatbl = ndnloaded_metatbl + 1 
+                
                 except Exception as e:
 
                     if debug:
                         logging.debug ('')
                         logging.debug (f'get resultfile exception: {str(e):s}') 
 
+#
+# } end download result metadata tables
+#
 
-#
-#    download graph metadata tables
-#
         if (ngraphtbl > 0):
+#
+#{  download graph metadata tables
+#
 
             for l in range (ngraphtbl):
            
@@ -2253,6 +2277,12 @@ class Archive:
                         logging.debug ('')
                         logging.debug ('returned __get_moss_resultfile') 
 
+                    #msg = 'Graphic metadata table downloaded to file [' + \
+                    #    graphpath + ']'
+                    #print (msg)
+                    
+                    ndnloaded_metatbl = ndnloaded_metatbl + 1 
+                
                 except Exception as e:
 
                     if debug:
@@ -2275,29 +2305,14 @@ class Archive:
                         logging.debug (f'url_prefix= {url_prefix:s}') 
 
                     nrecstr = jsondata['results']['graphtbls'][l]['nrec']
-                    nrec = int(nrecstr)
+                    nrec_png = int(nrecstr)
 
                     if debug:
                         logging.debug ('')
-                        logging.debug (f'nrec= {nrec:d}') 
+                        logging.debug (f'nrec_png= {nrec_png:d}') 
                    
-                    """
-                    ipng = 0
-                    pngfile = \
-                        jsondata['results']['graphtbls'][l]['metadata'][ipng]['pngfile']
-
-                    pngurl = url_prefix + '/' + pngfile
-                    pngpath = outdir + '/' + pngfile
-
-                    if debug:
-                        logging.debug ('')
-                        logging.debug (f'ipng= {ipng:d}')
-                        logging.debug (f'pngfile= {pngfile:s}') 
-                        logging.debug (f'pngpath= {pngpath:s}') 
-                        logging.debug (f'pngurl= {pngurl:s}') 
-                    """
-                   
-                    for ipng in range (nrec):
+                    
+                    for ipng in range (nrec_png):
 
                         pngfile = \
                             jsondata['results']['graphtbls'][l]['metadata'][ipng]['pngfile']
@@ -2314,17 +2329,25 @@ class Archive:
                             logging.debug (f'pngurl= {pngurl:s}') 
 
                         try:
-                            self.__get_moss_resultfile (pngurl, pngpath, debug=1)
+                            self.__get_moss_resultfile (pngurl, pngpath)
                 
                             if debug:
                                 logging.debug ('')
                                 logging.debug ('returned __get_moss_resultfile') 
-
+                            ndnloaded_png = ndnloaded_png + 1 
+                
                         except Exception as e:
 
                             if debug:
                                 logging.debug ('')
-                                logging.debug (f'get pngfile exception: {str(e):s}') 
+                                logging.debug (\
+                                    f'get pngfile exception: {str(e):s}') 
+      
+        print (f'{ndnloaded_metatbl:d} metadata tables and {ndnloaded_png:d} graph PNG files downloaded') 
+
+#
+# } end download graph metadata tables
+#
 
         return
 
@@ -2412,8 +2435,8 @@ class Archive:
             logging.debug ('')
             logging.debug (f'data written to file: {outpath:s}')
                 
-        msg = 'Result downloaded to file [' + outpath + ']'
-        print (msg)
+        #msg = 'Result downloaded to file [' + outpath + ']'
+        #print (msg)
         return
 
 #
