@@ -13,6 +13,10 @@ class Conf (_config.ConfigNamespace):
         ['https://koa.ipac.caltech.edu/'],
         'Name of the KOA server to use.') 
 
+    cgipgm = _config.ConfigItem (
+        ['TAP'],
+        'alias location for TAP cgi program.') 
+
     timeout = _config.ConfigItem (
         60,
         'Time limit for connecting to KOA server.')
