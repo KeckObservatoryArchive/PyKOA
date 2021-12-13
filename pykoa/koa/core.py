@@ -3229,7 +3229,7 @@ class Archive:
                         #    cookiejar, outdir_lev1)
                         
                         nlev1 = self.__download_lev1files (jsonData, \
-                            cookiejar, outdir_lev1, debug=1)
+                            cookiejar, outdir, debug=1)
                     
                         if debug:
                             logging.debug ('')
@@ -3420,7 +3420,7 @@ class Archive:
 #
     
 
-    def __download_lev1files (self, jsonData, cookiejar, outdir_lev1, \
+    def __download_lev1files (self, jsonData, cookiejar, outdir, \
         **kwargs):
 #
 #{ Archive.__download_lev1files
@@ -3431,11 +3431,13 @@ class Archive:
             debugstr = kwargs.get ('debug')
             debug = int(debugstr)
     
+        outdir_lev1 = outdir + '/lev1'
+        
         if debug:
             logging.debug ('')
             logging.debug (f'Enter __download_lev1files:')
+            logging.debug (f'outdir= {outdir:s}')
             logging.debug (f'outdir_lev1= {outdir_lev1:s}')
-
 
 #
 #    read input lev1list JSON file
@@ -3477,7 +3479,8 @@ class Archive:
 #
         if debug:
             logging.debug ('Start downloading from lev1list:')
-       
+        
+
         filehand_lev1 = ''
         lev1file = ''
         nrec = 0 
@@ -3614,7 +3617,7 @@ class Archive:
                         logging.debug ('')
                         logging.debug (f'filehand_lev1= {filehand_lev1:s}')
                     
-                    lev1filepath = outdir + '/lev1/' + subdir
+                    lev1filepath = outdir_lev1 + '/' + subdir
                     
                     if debug:
                         logging.debug ('')
