@@ -3303,18 +3303,23 @@ class Archive:
                     logging.debug (f'koaid_base= {koaid_base:s}')
 	    
                 caliblist = outdir_calib + '/' + koaid_base + '.caliblist.json'
+                caliblist_ipac = outdir_calib + '/' + koaid_base + '.caliblist.tbl'
                 
                 if debug:
                     logging.debug ('')
                     logging.debug (f'caliblist= {caliblist:s}')
+                    logging.debug (f'caliblist_ipac= {caliblist_ipac:s}')
 
+                #
+                #    download caliblist (json)
+                #
                 isExist = os.path.exists (caliblist)
 	    
                 if (not isExist):
 
                     if debug:
                         logging.debug ('')
-                        logging.debug ('downloading calibfiles')
+                        logging.debug ('downloading caliblist')
 	    
                     url = self.caliblist_url \
                         + 'instrument=' + instrument \
@@ -3339,6 +3344,45 @@ class Archive:
                         #print (f'File [{caliblist:s}] download: {str(e):s}')
                         #msg = 'Error downloading caliblist [' + \
                         #    caliblist + ']:' + str(e)
+                        
+                        msg = 'No associated calibration list for ' + \
+                            koaid
+                        print (f'{msg:s}')
+                        continue 
+                         
+
+                #
+                #    download caliblist_ipac
+                #
+                isExist = os.path.exists (caliblist_ipac)
+	    
+                if (not isExist):
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('downloading caliblist_ipac')
+	    
+                    url = self.caliblist_url \
+                        + 'instrument=' + instrument \
+                        + '&koaid=' + koaid + '&format=ipac'
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'caliblist_ipac url= {url:s}')
+
+                    try:
+                        self.__submit_request (url, caliblist_ipac, cookiejar)
+                        msg =  'Returned file written to: ' + caliblist_ipac   
+           
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('returned __submit_request')
+                            logging.debug (f'msg= {msg:s}')
+            
+                    except Exception as e:
+                        #print (f'File [{caliblist:s}] download: {str(e):s}')
+                        #msg = 'Error downloading caliblist_ipac [' + \
+                        #    caliblist_ipac + ']:' + str(e)
                         
                         msg = 'No associated calibration list for ' + \
                             koaid
