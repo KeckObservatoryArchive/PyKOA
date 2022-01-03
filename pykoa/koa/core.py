@@ -319,7 +319,6 @@ class Archive:
 
 
         self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
-        url = self.login_url + data_encoded
         
         if self.debug:
             logging.debug ('')
@@ -1539,23 +1538,16 @@ class Archive:
 
         startdate (string): a date string in the format of 'yyyy-mm-dd'
 
-        outdir (string): a full output directory path for the returned 
-            'result json file', 'object metadata file', and the 
-            optional 'graph metadata file' where
+        outpath (string): a full output path for the returned 'result json file'
+            which contains the information of the moving objects found including:
             
-            result json file -- contains the links and the contents of 
-                moving object's metadata files and graph metadata files,  
-            
-            moving object metadata file -- an IPAC ascii format file containing
-                the same metadata infomation as one of the object metadata files
-                in the result json file,
+            input parameters,
+            numbers of moving objects found,
+            metadata,
+            URL link to the file that is the same metadata in IPAC format,
+            URL link to the PNG files showing the intersections of the KOA 
+            observation with the moving objects' trajectory.
 
-            graph metadata file (optional)-- an IPAC ascii format file 
-                containing the same metadata infomation as one of the 
-                graph metadata files in the result json file; this file 
-                contains links to png file showing moving object's trajectories.
-
-        
         Optional inputs:
 	----------------
         enddate (string): a date string in the format of 'yyyy-mm'dd';
@@ -2098,6 +2090,11 @@ class Archive:
                 with open (debugfname, 'w') as fdebug:
                     pass
 
+        if debug:
+            logging.debug ('')
+            logging.debug ('Enter download_moving_object_metadata')
+            logging.debug (f'jsonpath= {jsonpath:s}')
+            logging.debug (f'outdir= {outdir:s}')
 
 #
 #    retrieve baseurl from conf class;
@@ -2109,7 +2106,7 @@ class Archive:
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'baseurl= {self.baseurl:s}')
             logging.debug ('Enter download_moving_object_metadata:')
@@ -2156,6 +2153,33 @@ class Archive:
         if debug:
             logging.debug ('')
             logging.debug ('returned os.makedirs') 
+
+
+        pngsubdir = ''
+        if pngflag:
+            pngsubdir = outdir + '/png'
+
+#
+#    make png subdir
+#
+            d1 = int ('0775', 8)
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'd1= {d1:d}')
+     
+            try:
+                os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
+
+            except Exception as e:
+            
+                msg = f'Failed to create {outdir:s}: {str(e):s}'
+                print (msg)
+                return
+
+            if debug:
+                logging.debug ('')
+                logging.debug ('returned os.makedirs') 
 
 #
 #    parse input json file for parameters
@@ -2396,7 +2420,7 @@ class Archive:
                             jsondata['results']['graphtbls'][l]['metadata'][ipng]['pngfile']
                         
                         pngurl = url_prefix + '/' + pngfile
-                        pngpath = outdir + '/' + pngfile
+                        pngpath = pngsubdir + '/' + pngfile
 
 
                         if debug:
@@ -2691,7 +2715,7 @@ class Archive:
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'baseurl= {self.baseurl:s}')
             logging.debug ('Enter download:')
@@ -3139,7 +3163,7 @@ class Archive:
                         try:
                             self.__submit_request (url, lev1list, cookiejar, \
                                 debug=1)
-                            nlev1list = self.nlev1list + 1
+                            nlev1list = nlev1list + 1
 
                             msg =  'Returned file written to: ' + lev1list 
            
