@@ -3161,8 +3161,10 @@ class Archive:
                             logging.debug (f'lev1list url= {url:s}')
 
                         try:
-                            self.__submit_request (url, lev1list, cookiejar, \
-                                debug=1)
+                            #self.__submit_request (url, lev1list, cookiejar, \
+                            #    debug=1)
+                            self.__submit_request (url, lev1list, cookiejar)
+                            
                             nlev1list = nlev1list + 1
 
                             msg =  'Returned file written to: ' + lev1list 
@@ -3171,6 +3173,7 @@ class Archive:
                                 logging.debug ('')
                                 logging.debug ('returned __submit_request')
                                 logging.debug (f'msg= {msg:s}')
+                                logging.debug (f'nlev1list= {nlev1list:d}')
             
                         except Exception as e:
                         
@@ -3249,15 +3252,16 @@ class Archive:
                         logging.debug ('list exist: downloading lev1files')
 
                     try:
-                        #nlev1 = self.__download_lev1files (jsonData, \
-                        #    cookiejar, outdir_lev1)
-                        
                         nlev1 = self.__download_lev1files (jsonData, \
-                            cookiejar, outdir, debug=1)
+                            cookiejar, outdir)
+                        
+                        #nlev1 = self.__download_lev1files (jsonData, \
+                        #    cookiejar, outdir, debug=1)
                     
                         if debug:
                             logging.debug ('')
-                            logging.debug ('returned __download_lev1files')
+                            logging.debug (f'returned __download_lev1files')
+                            logging.debug (f'nlev1= {nlev1:d}')
                         
                         ndnloaded_lev1 = ndnloaded_lev1 + nlev1
                     
