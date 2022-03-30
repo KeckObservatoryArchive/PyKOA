@@ -192,10 +192,7 @@ class Archive:
         self.makequery_url = self.baseurl + 'cgi-bin/KoaAPI/nph-makeQuery?'
         self.caliblist_url = self.baseurl+ 'cgi-bin/KoaAPI/nph-getCaliblist?'
         self.lev1list_url = self.baseurl + 'cgi-bin/KoaAPI/nph-getL1list?'
-        #self.getkoa_url = self.baseurl + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
-        self.getkoa_url = conf.server + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
-      
-      
+        self.getkoa_url = self.baseurl + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
 
         if self.debug:
             logging.debug ('')
@@ -3026,9 +3023,7 @@ class Archive:
 #
 #    urls for nph-getKoa, and nph-getCaliblist
 #
-        #self.getkoa_url = self.baseurl + \
-        #    'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
-        self.getkoa_url = conf.server + \
+        self.getkoa_url = self.baseurl + \
             'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
         self.caliblist_url = self.baseurl + \
             'cgi-bin/KoaAPI/nph-getCaliblist?'
@@ -3157,8 +3152,7 @@ class Archive:
                     (instrument.lower() != "osiris") and \
                     (instrument.lower() != "lws") and \
                     (instrument.lower() != "hires") and \
-                    (instrument.lower() != "nirspec") and \
-                    (instrument.lower() != "kcwi")):
+                    (instrument.lower() != "nirspec")):
                
                     if (l == srow):
                         print (f'Instrument [{instrument:s}] does not have level1 data.')
@@ -3538,8 +3532,7 @@ class Archive:
                 (instrument.lower() == "osiris") or \
                 (instrument.lower() == "lws") or \
                 (instrument.lower() == "hires") or \
-                (instrument.lower() == "nirspec") or \
-                (instrument.lower() == "kcwi")):
+                (instrument.lower() == "nirspec")):
                
                 print (f'{nlev1list:d} new lev1 list downloaded.')
                 print (f'{ndnloaded_lev1:d} new lev1 files downloaded.')
@@ -3594,7 +3587,6 @@ class Archive:
         data = ''
         if ((instrument.lower() == 'nirc2') or \
             (instrument.lower() == 'osiris') or \
-            (instrument.lower() == 'kcwi') or \
             (instrument.lower() == 'lws')):
                 
             data = jsonData["result"]["lev1file"]
@@ -3626,7 +3618,6 @@ class Archive:
 
         if ((instrument.lower() == 'nirc2') or \
             (instrument.lower() == 'osiris') or \
-            (instrument.lower() == 'kcwi') or \
             (instrument.lower() == 'lws')):
         #
         # { if n2, os, lw
