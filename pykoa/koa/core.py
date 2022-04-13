@@ -2683,23 +2683,26 @@ class Archive:
         end_row (integer): default is end_row = nrows - 1 where nrows is the 
                            number of rows in the metadata file;
 
-        lev0file (integer): whether to download the level0 (i.e. raw data) 
-            file(s) (0: do not download; 1: download);
+        lev0file (integer): 1/0; 
+            1: download level0 files (i.e. raw data) in 'lev0' directory;
+            0: do not download level0 files.
+            default is 1.
+        
+        calibfile (integer): 1/0;
+            1: download calibration files;
+            0: do not download calibration files.
             default is 0.
         
-        calibfile (integer): whether to download the associated calibration 
-            files (0: do not download; 1: download);
+        lev1file (integer): 1/0;
+            1: download level1 files in 'lev1' directory;
+            0: do not download level1 files.
             default is 0.
         
-        lev1file (integer): whether to download the associated level 1 
-            file(s) (0: do not download; 1: download);
-            default is 0.
-    
-        flat_subdir (1 or 0): the default for this parameter is 0 indicate 
-            lev0, lev1, and calib files are downloaed to their separate
-            sub-directories; if set to 1 meaning all three types of files 
-            will be downloaded to the same download directories.
-
+        calibdir (integer): 1/0; 
+            1: put calibration files in their own directory named 'calib'; 
+            0: put the calibration files in the 'lev0' directory with other 
+                raw, science files.
+            default is 1.
         """
        
         debug = 0
@@ -2879,7 +2882,7 @@ class Archive:
             return
             #sys.exit()
         
-        lev0file = 0 
+        lev0file = 1 
         if ('lev0file' in kwargs): 
             lev0file = kwargs.get('lev0file')
          
@@ -2891,25 +2894,25 @@ class Archive:
         if ('lev1file' in kwargs): 
             lev1file = kwargs.get('lev1file')
          
-        flat_subdir = 0 
-        if ('flat_subdir' in kwargs): 
-            flat_subdir = kwargs.get('flat_subdir')
+        calibdir = 1 
+        if ('calibdir' in kwargs): 
+            calibdir = kwargs.get('calibdir')
          
         if debug:
             logging.debug ('')
             logging.debug (f'lev0file= {lev0file:d}')
             logging.debug (f'calibfile= {calibfile:d}')
             logging.debug (f'lev1file= {lev1file:d}')
-            logging.debug (f'flat_subdir= {flat_subdir:d}')
+            logging.debug (f'calibdir= {calibdir:d}')
 
-
+        """
         if ((lev0file == 0) and \
             (lev1file == 0) and \
             (calibfile == 0)):
             
             print ('Please choose which types of data you wish to download: lev0file, lev1file, and calibfile, more than one choice is allowed.')
             return
-
+        """
 
         srow = 0;
         erow = len_tbl - 1
@@ -2957,7 +2960,7 @@ class Archive:
 #    lev0 subdir 
 #
         outdir_lev0 = outdir
-        if ((lev0file == 1) and (flat_subdir == 0)):
+        if (lev0file == 1):
             outdir_lev0 = outdir + '/lev0'
             
         try:
@@ -2978,7 +2981,7 @@ class Archive:
 #    lev1 subdir 
 #
         outdir_lev1 = outdir
-        if ((lev1file == 1) and (flat_subdir == 0)):
+        if (lev1file == 1):
             outdir_lev1 = outdir + '/lev1'
             
         try:
@@ -2998,9 +3001,16 @@ class Archive:
 #    calib subdir 
 #
         outdir_calib = outdir
-        if ((calibfile == 1) and (flat_subdir == 0)):
-            outdir_calib = outdir + '/calibfiles'
+        if (calibfile == 1):
             
+            if (lev0file == 0):
+                outdir_calib = outdir + '/calib'
+            else:
+                if (calibdir == 1):
+                    outdir_calib = outdir + '/calib'
+                else:
+                    outdir_calib = outdir + '/lev0'
+
         try:
             os.makedirs (outdir_calib, mode=d1, exist_ok=True) 
 
@@ -3296,10 +3306,10 @@ class Archive:
 
                         try:
                             nlev1 = self.__download_lev1files (jsonData, \
-                                cookiejar, outdir, flat_subdir)
+                                cookiejar, outdir_lev1)
                         
                             #nlev1 = self.__download_lev1files (jsonData, \
-                            #    cookiejar, outdir, flat_subdir, debug=1)
+                            #    cookiejar, outdir_lev1, debug=1)
                     
                             if debug:
                                 logging.debug ('')
@@ -3546,7 +3556,7 @@ class Archive:
 #
     
 
-    def __download_lev1files (self, jsonData, cookiejar, outdir, flat_subdir, \
+    def __download_lev1files (self, jsonData, cookiejar, outdir_lev1, \
         **kwargs):
 #
 #{ Archive.__download_lev1files
@@ -3557,14 +3567,9 @@ class Archive:
             debugstr = kwargs.get ('debug')
             debug = int(debugstr)
    
-        outdir_lev1 = outdir
-        if (flat_subdir == 0):
-            outdir_lev1 = outdir + '/lev1'
-
         if debug:
             logging.debug ('')
             logging.debug (f'Enter __download_lev1files:')
-            logging.debug (f'outdir= {outdir:s}')
             logging.debug (f'outdir_lev1= {outdir_lev1:s}')
 
 #
@@ -3811,8 +3816,6 @@ class Archive:
 #
 #} end  Archive.__download_lev1files
 #
-
-
 
 
     def __download_calibfiles (self, listpath, cookiejar, outdir_calib, \
