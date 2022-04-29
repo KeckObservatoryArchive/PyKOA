@@ -55,6 +55,7 @@ import getpass
 import logging
 import time
 import json
+import lxml
 #import ijson
 import xmltodict 
 import tempfile
@@ -3058,8 +3059,8 @@ class Archive:
       
         nfile = erow - srow + 1   
         
-        print (f'Start downloading {nfile:d} FITS data you requested;')
-        print (f'please check your outdir: {outdir:s} for  progress.')
+        print (f'Start downloading {nfile:d} koaid data you requested;')
+        print (f'please check your outdir: {outdir:s} for  progress ....')
  
         for l in range (srow, erow+1):
         #
@@ -3147,7 +3148,7 @@ class Archive:
                             logging.debug (f'self.msg= {msg:s}')
             
                     except Exception as e:
-                        print (f'File [{koaid:s}] download: {str(e):s}')
+                        print (f'File [{koaid:s}] download error: {str(e):s}')
 
                 if debug:
                     logging.debug ('')
@@ -3304,6 +3305,16 @@ class Archive:
                             logging.debug ('')
                             logging.debug ('list exist: downloading lev1files')
 
+                    
+                        #if ((instrument.lower() != "hires") or \
+                        #    (instrument.lower() != "nirspec")):
+                        #    print ('')
+                        #    print ( \
+                        #        f'Downloading [{koaid:s}] level 1 files ....')
+                        
+                        #print ('')
+                        #print (f'Downloading [{koaid:s}] level 1 files ....')
+                        
                         try:
                             nlev1 = self.__download_lev1files (jsonData, \
                                 cookiejar, outdir_lev1)
@@ -3323,14 +3334,14 @@ class Archive:
                                 logging.debug ( \
                                     f'ndnloaded_lev1= {ndnloaded_lev1:d}')
                            
-                            msg = str(nlev1) + ' level1 files downloadded ' \
+                            msg = str(nlev1) + ' level1 files downloaded ' \
                                 + 'for koaid: [' + koaid + ']'
 
                             if debug:
                                 logging.debug ('')
                                 logging.debug (f'msg= {msg:s}')
                            
-                            print (f'{msg:s}')
+                            #print (f'{msg:s}')
          
                             if debug:
                                 logging.debug ('')
@@ -3488,7 +3499,16 @@ class Archive:
                     if debug:
                         logging.debug ('')
                         logging.debug ('list exist: downloading calibfiles')
-	    
+	   
+                    #if ((instrument.lower() != "hires") or \
+                    #    (instrument.lower() != "nirspec")):
+                    #    print ('')
+                    #    print ( \
+                    #        f'Downloading [{koaid:s}] calibration files ....')
+                    
+                    #print ('')
+                    #print (f'Downloading [{koaid:s}] calibration files ....')
+                        
                     try:
                         #ncalibs = self.__download_calibfiles ( \
                         #    caliblist, cookiejar, outdir_calib)
@@ -3501,6 +3521,10 @@ class Archive:
                             logging.debug ('')
                             logging.debug ('returned __download_calibfiles')
                             logging.debug (f'{ncalibs:d} downloaded')
+
+                        msg = str(ncalibs) + ' calibration files downloaded ' \
+                            + 'for koaid: [' + koaid + ']'
+                        #print (msg)
 
                     except Exception as e:
                 
@@ -3532,7 +3556,10 @@ class Archive:
             logging.debug (f'{ncaliblist:d} calibration list downloaded.')
             logging.debug (\
                 f'{ndnloaded_calib:d} calibration files downloaded.')
-        
+        #
+        #    print out total count of downloaded files
+        #
+        print ('')
         if (lev0file == 1):
             print (f'A total of {ndnloaded_lev0:d} new lev0 FITS files downloaded.')
  
@@ -6177,7 +6204,9 @@ class KoaJob:
 #    parse returned status xml structure for parameters
 #
         try:
-            soup = bs.BeautifulSoup (self.statusstruct, 'lxml')
+            soup = bs.BeautifulSoup (self.statusstruct, 'xml')
+       
+            #soup = bs.BeautifulSoup (self.statusstruct, 'lxml')
        
         except Exception as e:
 
