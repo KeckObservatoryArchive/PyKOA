@@ -1554,7 +1554,8 @@ class Archive:
             if missing the default is the current date,
             
         naifid (integer): JPL's NAIF object ID number to more precisely 
-            identify the moving object.
+            identify the moving object; this is needed when the object name
+            such as 'pluto' which results in multiple targets.
         
         cookiepath (string): a cookie file path obtained via login method, only
                              required for querying the proprietary KOA data.
@@ -1566,7 +1567,7 @@ class Archive:
             png files of moving object tracjectories; default is 1,
 
         orbitalinput (int): 0 or 1 indicates whether the precise orbital 
-            input parameters are provided,
+            input parameters are provided; default is 0,
        
         The orbital input contains the following parameters:
     
@@ -1702,7 +1703,7 @@ class Archive:
         if ('naifid' in kwargs): 
             naifid = str (kwargs.get('naifid'))
 
-        datatype = ''
+        datatype = 'both'
         if ('datatype' in kwargs): 
             datatype = str (kwargs.get('datatype'))
 
@@ -1781,10 +1782,13 @@ class Archive:
         param['target'] = object
         param['starttime'] = startdate
         param['endtime'] = enddate
-        
+
         if (len(naifid) > 0):
             param['naifid'] = naifid
-        
+       
+        if ((instrument.lower() == 'hires') and (datatype.lower() == 'both')):
+            datatype = 'spec'
+
         if (len(datatype) > 0):
             param['datatype'] = datatype
         
@@ -2072,8 +2076,8 @@ class Archive:
         
         Optional input:
 	----------------
-        pngflag (0 or 1): default is 1 indicating that PNG files will be 
-                          downloaded; 0 to supress downloading PNG files.
+        pngflag (0 or 1): 1 indicating that PNG files will be downloaded; 
+                          default is 0.
         """
 
         debug = 0
@@ -2119,7 +2123,7 @@ class Archive:
             return 
 
 
-        pngflag = 1 
+        pngflag = 0 
         if ('pngflag' in kwargs):
             pngflag = int(kwargs.get ('pngflag'))
 
