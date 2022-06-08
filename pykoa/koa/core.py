@@ -1785,7 +1785,7 @@ class Archive:
 
         if (len(naifid) > 0):
             param['naifid'] = naifid
-       
+
         if ((instrument.lower() == 'hires') and (datatype.lower() == 'both')):
             datatype = 'spec'
 
@@ -2697,7 +2697,11 @@ class Archive:
             1: download calibration files;
             0: do not download calibration files.
             default is 0.
-        
+         
+            Note: The calibration files are saved in the directory determined 
+            by paramter 'calibdir' -- either in the 'calib' sub-directory, or
+            in the same directory as the raw data files.
+
         lev1file (integer): 1/0;
             1: download level1 files in 'lev1' directory;
             0: do not download level1 files.
