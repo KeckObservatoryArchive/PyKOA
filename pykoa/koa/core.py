@@ -55,6 +55,7 @@ import getpass
 import logging
 import time
 import json
+import lxml
 #import ijson
 import xmltodict 
 import tempfile
@@ -64,6 +65,7 @@ import requests
 import urllib 
 import http.cookiejar
 
+from datetime import date
 #from astropy.coordinates import name_resolve
 from astropy.table import Table, Column
 
@@ -89,7 +91,10 @@ class Archive:
 
     from pykoa.koa import Koa 
 
-    Koa.query_datetime ('hires', '2018-03-16 00:00:00/2018-03-18 00:00:00', outpath= './meta.xml', format='ipac') 
+    Koa.query_datetime ('hires', \
+        '2018-03-16 00:00:00/2018-03-18 00:00:00', \
+        outpath= './meta.xml', \
+        format='ipac') 
     """
     
     tap = None
@@ -99,12 +104,15 @@ class Archive:
     format = 'ipac'
     maxrec = -1 
     query = ''
-    
+    propflag = 1
+
     content_type = ''
     outdir = ''
     astropytbl = None
 
     ndnloaded = 0
+    ndnloaded_lev1 = 0
+    nlev1list = 0
     ndnloaded_calib = 0
     ncaliblist = 0
  
@@ -113,7 +121,6 @@ class Archive:
     
     debugfname = './koa.debug'    
     debug = 0    
-
 
     def __init__(self, **kwargs):
 #
@@ -154,23 +161,38 @@ class Archive:
             logging.debug ('')
             logging.debug (f'conf.server= {conf.server:s}')
 
-
         self.baseurl = conf.server
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
+        
+        len_baseurl = len (self.baseurl)
+        if (self.baseurl[len_baseurl-1] != '/'):
+            self.baseurl + '/'
 
         if self.debug:
             logging.debug ('')
             logging.debug (f'baseurl= {self.baseurl:s}')
+            logging.debug ('')
+            logging.debug (f'conf.cgipgm= {conf.cgipgm:s}')
+
+        self.cgipgm = conf.cgipgm
+        if ('cgipgm' in kwargs):
+            self.cgipgm = kwargs.get ('cgipgm')
+        
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'cgipgm= {self.cgipgm:s}')
 
 #
 #    urls for nph-tap.py, nph-koaLogin, nph-makeQyery, 
 #    nph-getKoa, and nph-getCaliblist
 #
-        self.tap_url = self.baseurl + '/TAP'
+        self.tap_url = self.baseurl + self.cgipgm
+        
         self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
         self.makequery_url = self.baseurl + 'cgi-bin/KoaAPI/nph-makeQuery?'
         self.caliblist_url = self.baseurl+ 'cgi-bin/KoaAPI/nph-getCaliblist?'
+        self.lev1list_url = self.baseurl + 'cgi-bin/KoaAPI/nph-getL1list?'
         self.getkoa_url = self.baseurl + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
 
         if self.debug:
@@ -237,7 +259,28 @@ class Archive:
                 logging.debug ('')
                 logging.debug ('debug turned on')
         
- 
+#
+#    if server keyword represent during dev/test, modify baseurl
+#
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'conf.server= {conf.server:s}')
+
+        self.baseurl = conf.server
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl (from conf)= {self.baseurl:s}')
+        
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+        
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+        
+
+        
         if self.debug:
             logging.debug ('')
             logging.debug ('')
@@ -274,28 +317,6 @@ class Archive:
 
         password = urllib.parse.quote (password)
 
-#
-#    retrieve baseurl from conf class;
-#
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'conf.server= {conf.server:s}')
-
-        self.baseurl = conf.server
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'baseurl (from conf)= {self.baseurl:s}')
-
-#
-#  construct full url for login
-#
-        if ('server' in kwargs):
-            self.baseurl = kwargs.get ('server')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
 
         self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
         
@@ -458,31 +479,41 @@ class Archive:
 	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
- 
-        if (self.debug == 0):
 
-            if ('debugfile' in kwargs):
+        debug = 0
+        debugfname = ''
+
+        if ('debugfile' in kwargs):
             
-                self.debug = 1
-                self.debugfname = kwargs.get ('debugfile')
+            debugfname = kwargs.get ('debugfile')
 
-                if (len(self.debugfname) > 0):
+            if (len(debugfname) > 0):
       
-                    logging.basicConfig (filename=self.debugfname, \
-                        level=logging.DEBUG)
-    
-                    with open (self.debugfname, 'w') as fdebug:
-                        pass
+                debug = 1
 
-            if self.debug:
+                logging.basicConfig (filename=debugfname, \
+                    level=logging.DEBUG)
+    
+                with open (debugfname, 'w') as fdebug:
+                    pass
+
+            if debug:
                 logging.debug ('')
                 logging.debug ('debug turned on')
         
-        if self.debug:
-            logging.debug ('')
+        if debug:
             logging.debug ('')
             logging.debug ('Enter query_datetime:')
-       
+      
+#
+#    modify baseurl if server keyword exists
+#
+        self.baseurl = conf.server
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'baseurl (from conf)= {self.baseurl:s}')
+
         instrument = str(instrument)
 
         if (len(instrument) == 0):
@@ -503,7 +534,7 @@ class Archive:
         self.datetime = datetime
         self.outpath = outpath
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'instrument= {self.instrument:s}')
             logging.debug (f'datetime= {self.datetime:s}')
@@ -516,7 +547,7 @@ class Archive:
         param['instrument'] = self.instrument
         param['datetime'] = self.datetime
        
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('call query_criteria')
 
@@ -584,27 +615,29 @@ class Archive:
 	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
- 
-        if (self.debug == 0):
+
+        debug = 0
+        debugfname = ''
+        if (debug == 0):
 
             if ('debugfile' in kwargs):
             
-                self.debug = 1
-                self.debugfname = kwargs.get ('debugfile')
+                debug = 1
+                debugfname = kwargs.get ('debugfile')
 
-                if (len(self.debugfname) > 0):
+                if (len(debugfname) > 0):
       
-                    logging.basicConfig (filename=self.debugfname, \
+                    logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (self.debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w') as fdebug:
                         pass
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('debug turned on')
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter query_date:')
@@ -629,7 +662,7 @@ class Archive:
         self.date = date
         self.outpath = outpath
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'instrument= {self.instrument:s}')
             logging.debug (f'date= {self.date:s}')
@@ -642,7 +675,7 @@ class Archive:
         param['instrument'] = self.instrument
         param['date'] = self.date
        
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('call query_criteria')
 
@@ -692,27 +725,29 @@ class Archive:
 	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
-   
-        if (self.debug == 0):
+        
+        debug = 0
+        debugfname = ''
+        if (debug == 0):
 
             if ('debugfile' in kwargs):
             
-                self.debug = 1
-                self.debugfname = kwargs.get ('debugfile')
+                debug = 1
+                debugfname = kwargs.get ('debugfile')
 
-                if (len(self.debugfname) > 0):
+                if (len(debugfname) > 0):
       
-                    logging.basicConfig (filename=self.debugfname, \
+                    logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (self.debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w') as fdebug:
                         pass
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('debug turned on')
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter query_position:')
@@ -736,7 +771,7 @@ class Archive:
         self.pos = pos
         self.outpath = outpath
  
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'instrument=  {self.instrument:s}')
             logging.debug (f'pos=  {self.pos:s}')
@@ -792,27 +827,29 @@ class Archive:
 	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
-   
-        if (self.debug == 0):
+        
+        debug = 0
+        debugfname = ''
+        if (debug == 0):
 
             if ('debugfile' in kwargs):
             
-                self.debug = 1
-                self.debugfname = kwargs.get ('debugfile')
+                debug = 1
+                debugfname = kwargs.get ('debugfile')
 
-                if (len(self.debugfname) > 0):
+                if (len(debugfname) > 0):
       
-                    logging.basicConfig (filename=self.debugfname, \
+                    logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (self.debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w') as fdebug:
                         pass
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('debug turned on')
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter query_object_name:')
@@ -835,7 +872,7 @@ class Archive:
         self.object = object
         self.outpath = outpath
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'instrument= {self.instrument:s}')
             logging.debug (f'object= {self.object:s}')
@@ -846,7 +883,7 @@ class Archive:
             radius_str = kwargs.get('radius')
             radius = float(radius_str)
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'radius= {radius:f}')
 
@@ -859,7 +896,7 @@ class Archive:
         
         except Exception as e:
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'name_resolve error: {str(e):s}')
             
@@ -869,7 +906,7 @@ class Archive:
         ra = coords.ra.value
         dec = coords.dec.value
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'ra= {ra:f}')
             logging.debug (f'dec= {dec:f}')
@@ -881,18 +918,18 @@ class Archive:
 
         lookup = None
         try:
-            if self.debug:
+            if debug:
                 lookup = objLookup (object, debug=1)
             else:
                 lookup = objLookup (object)
         
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('objLookup run successful and returned')
         
         except Exception as e:
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'objLookup error: {str(e):s}')
             
@@ -901,13 +938,13 @@ class Archive:
 
         if (lookup.status == 'error'):
             
-            self.msg = 'Input object [' + object + '] lookup error: ' + \
+            msg = 'Input object [' + object + '] lookup error: ' + \
                 lookup.msg
             
-            print (self.msg)
+            print (msg)
             return
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'source= {lookup.source:s}')
             logging.debug (f'objname= {lookup.objname:s}')
@@ -925,7 +962,7 @@ class Archive:
 
         self.pos = 'circle ' + ra2000 + ' ' + dec2000 + ' ' + str(radius)
 	
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'pos= {self.pos:s}')
        
@@ -996,30 +1033,50 @@ class Archive:
 	maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
-
-        if (self.debug == 0):
+        
+        debug = 0
+        debugfname = ''
+        if (debug == 0):
 
             if ('debugfile' in kwargs):
             
-                self.debug = 1
-                self.debugfname = kwargs.get ('debugfile')
+                debug = 1
+                debugfname = kwargs.get ('debugfile')
 
-                if (len(self.debugfname) > 0):
+                if (len(debugfname) > 0):
       
-                    logging.basicConfig (filename=self.debugfname, \
+                    logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (self.debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w') as fdebug:
                         pass
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('debug turned on')
-        
-        if self.debug:
+
+
+#
+#    during dev/test: if server keyword exists, modify baseurl
+#
+#    retrieve baseurl from conf class;
+#
+        self.baseurl = conf.server
+
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        self.cgipgm = conf.cgipgm
+        if ('cgipgm' in kwargs):
+            self.cgipgm = kwargs.get ('cgipgm')
+
+        if debug:
             logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+            logging.debug (f'cgipgm= {self.cgipgm:s}')
             logging.debug ('')
             logging.debug ('Enter query_criteria')
+        
 #
 #    send url to server to construct the select statement
 #
@@ -1027,7 +1084,7 @@ class Archive:
  
         len_param = len(param)
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'outpath= {self.outpath:s}')
             
@@ -1041,7 +1098,7 @@ class Archive:
         if ('cookiepath' in kwargs): 
             self.cookiepath = kwargs.get('cookiepath')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'cookiepath= {self.cookiepath:s}')
 
@@ -1065,35 +1122,23 @@ class Archive:
                 ' to integer.')
             return
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'format= {self.format:s}')
             logging.debug (f'maxrec= {self.maxrec:d}')
 
         data = urllib.parse.urlencode (param)
 
-#
-#    retrieve baseurl from conf class;
-#
-#    during dev or test, baseurl will be a keyword input
-#
-        self.baseurl = conf.server
-
-        if ('server' in kwargs):
-            self.baseurl = kwargs.get ('server')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
 
 #
 #    urls for nph-tap.py, nph-koaLogin, nph-makeQyery, 
 #    nph-getKoa, and nph-getCaliblist
 #
-        self.tap_url = self.baseurl + 'TAP'
+        self.tap_url = self.baseurl + self.cgipgm
+        
         self.makequery_url = self.baseurl + 'cgi-bin/KoaAPI/nph-makeQuery?'
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'tap_url= [{self.tap_url:s}]')
             logging.debug (f'makequery_url= [{self.makequery_url:s}]')
@@ -1101,7 +1146,7 @@ class Archive:
 
         url = self.makequery_url + data            
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'url= {url:s}')
 
@@ -1109,20 +1154,20 @@ class Archive:
         try:
             query = self.__make_query (url) 
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('returned __make_query')
   
         except Exception as e:
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'Error: {str(e):s}')
             
             print (str(e))
             return 
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'query= {query:s}')
        
@@ -1134,12 +1179,11 @@ class Archive:
         self.tap = None
         if (len(self.cookiepath) > 0):
             
-            if self.debug:
+            if debug:
                 logging.debug ('')
-                logging.debug ('xxx0')
                 logging.debug (f'cookiepath= {self.cookiepath:s}')
        
-            if self.debug:
+            if debug:
                 
                 try:
                     self.tap = KoaTap (self.tap_url, \
@@ -1150,7 +1194,7 @@ class Archive:
                 
                 except Exception as e:
             
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug (f'Error: {str(e):s}')
                     
@@ -1166,7 +1210,7 @@ class Archive:
                 
                 except Exception as e:
             
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug (f'Error: {str(e):s}')
                     
@@ -1174,7 +1218,7 @@ class Archive:
                     return 
         
         else: 
-            if self.debug:
+            if debug:
                 try:
                     self.tap = KoaTap (self.tap_url, \
                         format=self.format, \
@@ -1183,7 +1227,7 @@ class Archive:
                 
                 except Exception as e:
             
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug (f'Error: {str(e):s}')
                     
@@ -1198,14 +1242,14 @@ class Archive:
         
                 except Exception as e:
             
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug (f'Error: {str(e):s}')
                     
                     print (str(e))
                     return 
         
-        if self.debug:
+        if debug:
             logging.debug('')
             logging.debug('koaTap initialized')
             logging.debug('')
@@ -1213,7 +1257,7 @@ class Archive:
 
         print ('submitting request...')
 
-        if self.debug:
+        if debug:
             logging.debug('')
             logging.debug('call self.tap.send_async with debug')
             
@@ -1230,7 +1274,7 @@ class Archive:
                 format=self.format, \
                 maxrec=self.maxrec)
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
@@ -1239,7 +1283,7 @@ class Archive:
 
         indx = retstr_lower.find ('error')
     
-#        if self.debug:
+#        if debug:
 #            logging.debug ('')
 #            logging.debug (f'indx= {indx:d}')
 
@@ -1284,28 +1328,45 @@ class Archive:
 	    maxrec (integer):  maximum records to be returned 
 	         default: -1 or not specified will return all requested records
         """
-   
-        if (self.debug == 0):
+  
+        debug = 0
+        debugfname = ''
+        if (debug == 0):
 
             if ('debugfile' in kwargs):
             
-                self.debug = 1
-                self.debugfname = kwargs.get ('debugfile')
+                debug = 1
+                debugfname = kwargs.get ('debugfile')
 
-                if (len(self.debugfname) > 0):
+                if (len(debugfname) > 0):
       
-                    logging.basicConfig (filename=self.debugfname, \
+                    logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (self.debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w') as fdebug:
                         pass
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('debug turned on')
         
-        if self.debug:
+#
+#    retrieve baseurl from conf class;
+#
+#    during dev or test, baseurl will be a keyword input
+#
+        self.baseurl = conf.server
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        self.cgipgm = conf.cgipgm
+        if ('cgipgm' in kwargs):
+            self.cgipgm = kwargs.get ('cgipgm')
+
+        if debug:
             logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+            logging.debug (f'cgipgm= {self.cgipgm:s}')
             logging.debug ('')
             logging.debug ('Enter query_adql:')
         
@@ -1320,7 +1381,7 @@ class Archive:
         self.query = query
         self.outpath = outpath
  
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('')
             logging.debug (f'query= {self.query:s}')
@@ -1330,7 +1391,7 @@ class Archive:
         if ('cookiepath' in kwargs): 
             self.cookiepath = kwargs.get('cookiepath')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'cookiepath= {self.cookiepath:s}')
 
@@ -1341,30 +1402,24 @@ class Archive:
         self.maxrec = -1 
         if ('maxrec' in kwargs): 
             self.maxrec = kwargs.get('maxrec')
-
-        if self.debug:
+        
+        self.propflag = 1 
+        if ('propflag' in kwargs): 
+            self.propflag = kwargs.get('propflag')
+        
+        if debug:
             logging.debug ('')
             logging.debug (f'format= {self.format:s}')
             logging.debug (f'maxrec= {self.maxrec:d}')
+            logging.debug (f'propflag= {self.propflag:d}')
 
-#
-#    retrieve baseurl from conf class;
-#
-        self.baseurl = conf.server
-
-        if ('server' in kwargs):
-            self.baseurl = kwargs.get ('server')
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
 
 #
 #    urls for nph-tap.py
 #
-        self.tap_url = self.baseurl + 'TAP'
-
-        if self.debug:
+        self.tap_url = self.baseurl + self.cgipgm
+        
+        if debug:
             logging.debug ('')
             logging.debug (f'tap_url= [{self.tap_url:s}]')
 
@@ -1375,7 +1430,7 @@ class Archive:
 
         if (len(self.cookiepath) > 0):
            
-            if self.debug:
+            if debug:
                 self.tap = KoaTap (self.tap_url, \
                     format=self.format, \
                     maxrec=self.maxrec, \
@@ -1387,17 +1442,24 @@ class Archive:
                     maxrec=self.maxrec, \
                     cookiefile=self.cookiepath)
         else: 
-            if self.debug:
+            if debug:
                 self.tap = KoaTap (self.tap_url, \
                     format=self.format, \
                     maxrec=self.maxrec, \
 	            debug=1)
+                
+                #self.tap = KoaTap (self.tap_url, \
+                #    format=self.format, \
+                #    maxrec=self.maxrec, \
+                #    propflag=self.propflag, \
+	        #    debug=1)
             else:
                 self.tap = KoaTap (self.tap_url, \
                     format=self.format, \
+                    propflag=self.propflag, \
                     maxrec=self.maxrec)
         
-        if self.debug:
+        if debug:
             logging.debug('')
             logging.debug('koaTap initialized')
             logging.debug(f'query= {query:s}')
@@ -1405,13 +1467,20 @@ class Archive:
 
         print ('submitting request...')
 
-        if self.debug:
+        if debug:
             if (len(self.outpath) > 0):
                 retstr = self.tap.send_async (query, \
                     outpath=self.outpath, \
                     format=self.format, \
                     maxrec=self.maxrec, \
                     debug=1)
+                
+                #retstr = self.tap.send_async (query, \
+                #    outpath=self.outpath, \
+                #    format=self.format, \
+                #    maxrec=self.maxrec, \
+                #    propflag=self.propflag, \
+                #    debug=1)
             else:
                 retstr = self.tap.send_async (query, \
                     format=self.format, \
@@ -1428,7 +1497,7 @@ class Archive:
                     format=self.format, \
                     maxrec=self.maxrec)
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
@@ -1457,10 +1526,9 @@ class Archive:
 #{ Archive.print_date
 #
 
-
         if self.debug:
             logging.debug ('')
-            logging.debug ('Enter koa.print_data:')
+            logging.debug ('Enter Koa.print_data:')
 
         try:
             self.tap.print_data ()
@@ -1481,12 +1549,19 @@ class Archive:
 #
     
         """
-        'download' method allows download of FITS files (and/or) 
-        associated calibration files shown in their metadata file.
+        'download' method allows download of FITS files shown in the 
+        metadata file. The same method has the option of download the
+        associated calibration files and level 1 files. 
 
-        *** Requirement: To download files, the following three columns: 
-            instrume, koaid, and filehand must be included in the input
+        *** Requirement: 
+            
+            To download FITS files, the following two columns: 
+            instrume and filehand must be included in the metadata file.
+
+            To download associated calibrated files, the following three 
+            columns: instrume, koaid, and filehand must be included in the 
             metadata file.
+
 
 	Required input:
 	-----
@@ -1496,7 +1571,10 @@ class Archive:
 	format (string):   metadata table's format: ipac, votable, csv, or tsv.
 	
         outdir (string):   the directory for depositing the returned files      
- 
+
+        At least one of the following three optional parameters:
+        lev1file, lev1file, and calibfile should be set to 1.:
+
 	
         Optional input:
         ----------------
@@ -1508,32 +1586,56 @@ class Archive:
         end_row (integer): default is end_row = nrows - 1 where nrows is the 
                            number of rows in the metadata file;
 
-        calibfile (integer): whether to download the associated calibration 
-            files (0: do not download; 1: download);
-            default is 0.
-        """
+        lev0file (integer): 1/0; 
+            1: download level0 files (i.e. raw data) in 'lev0' directory;
+            0: do not download level0 files.
+            default is 1.
         
-        if (self.debug == 0):
-
-            if ('debugfile' in kwargs):
+        calibfile (integer): 1/0;
+            1: download calibration files;
+            0: do not download calibration files.
+            default is 0.
+        
+        lev1file (integer): 1/0;
+            1: download level1 files in 'lev1' directory;
+            0: do not download level1 files.
+            default is 0.
+        
+        calibdir (integer): 1/0; 
+            1: put calibration files in their own directory named 'calib'; 
+            0: put the calibration files in the 'lev0' directory with other 
+                raw, science files.
+            default is 1.
+        """
+       
+        debug = 0
+        debugfname = ''
+        if ('debugfile' in kwargs):
             
-                self.debug = 1
-                self.debugfname = kwargs.get ('debugfile')
+            debug = 1
+            debugfname = kwargs.get ('debugfile')
 
-                if (len(self.debugfname) > 0):
+            if (len(debugfname) > 0):
       
-                    logging.basicConfig (filename=self.debugfname, \
-                        level=logging.DEBUG)
+                logging.basicConfig (filename=debugfname, \
+                    level=logging.DEBUG)
     
-                    with open (self.debugfname, 'w') as fdebug:
-                        pass
+                with open (debugfname, 'w') as fdebug:
+                    pass
 
-            if self.debug:
-                logging.debug ('')
-                logging.debug ('debug turned on')
-    
-        if self.debug:
+#
+#    retrieve baseurl from conf class;
+#
+#    during dev or test, baseurl will be a keyword input
+#
+        self.baseurl = conf.server
+
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if debug:
             logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
             logging.debug ('Enter download:')
         
         if (len(metapath) == 0):
@@ -1547,16 +1649,13 @@ class Archive:
         if (len(outdir) == 0):
             print ('Failed to find required input parameter: outdir')
             return
+ 
 
-        self.metapath = metapath
-        self.format = format
-        self.outdir = outdir
-
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'metapath= {self.metapath:s}')
-            logging.debug (f'format= {self.format:s}')
-            logging.debug (f'outdir= {self.outdir:s}')
+            logging.debug (f'metapath= {metapath:s}')
+            logging.debug (f'format= {format:s}')
+            logging.debug (f'outdir= {outdir:s}')
 
         
         cookiepath = ''
@@ -1565,7 +1664,7 @@ class Archive:
         if ('cookiepath' in kwargs): 
             cookiepath = kwargs.get('cookiepath')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'cookiepath= {cookiepath:s}')
 
@@ -1576,13 +1675,13 @@ class Archive:
             try: 
                 cookiejar.load (ignore_discard=True, ignore_expires=True)
     
-                if self.debug:
+                if debug:
                     logging.debug (\
                         f'cookie loaded from file: {cookiepath:s}')
         
                 for cookie in cookiejar:
                     
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug ('cookie=')
                         logging.debug (cookie)
@@ -1591,139 +1690,163 @@ class Archive:
                         logging.debug (f'cookie.domain= {cookie.domain:s}')
 
             except Exception as e:
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'loadCookie exception: {str(e):s}')
                 pass
 
 #        endif (cookiepath)
 
-        fmt_astropy = self.format
-        if (self.format == 'tsv'):
+        fmt_astropy = format
+        if (format == 'tsv'):
             fmt_astropy = 'ascii.tab'
-        if (self.format == 'csv'):
+        if (format == 'csv'):
             fmt_astropy = 'ascii.csv'
-        if (self.format == 'ipac'):
+        if (format == 'ipac'):
             fmt_astropy = 'ascii.ipac'
 
 #
 #    read metadata to astropy table
 #
-        self.astropytbl = None
+        astropytbl = None
         try:
-            self.astropytbl = Table.read (self.metapath, format=fmt_astropy)
+            astropytbl = Table.read (metapath, format=fmt_astropy)
         
         except Exception as e:
-            self.msg = 'Failed to read metadata table to astropy table:' + \
+            msg = 'Failed to read metadata table to astropy table:' + \
                 str(e) 
-            print (self.msg)
+            print (msg)
             return
             #sys.exit()
 
-        self.len_tbl = len(self.astropytbl)
+        len_tbl = len(astropytbl)
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug ('self.astropytbl read')
-            logging.debug (f'self.len_tbl= {self.len_tbl:d}')
+            logging.debug ('astropytbl read')
+            logging.debug (f'len_tbl= {len_tbl:d}')
 
         
-        self.colnames = self.astropytbl.colnames
+        colnames = astropytbl.colnames
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug ('self.colnames:')
-            logging.debug (self.colnames)
+            logging.debug ('colnames:')
+            logging.debug (colnames)
   
-        self.len_col = len(self.colnames)
+        len_col = len(colnames)
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'self.len_col= {self.len_col:d}')
+            logging.debug (f'len_col= {len_col:d}')
 
  
-        self.ind_instrume = -1
-        self.ind_koaid = -1
-        self.ind_filehand = -1
-        for i in range (0, self.len_col):
+        ind_instrume = -1
+        ind_koaid = -1
+        ind_filehand = -1
+        for i in range (len_col):
 
-            if (self.colnames[i].lower() == 'instrume'):
-                self.ind_instrume = i
+            if (colnames[i].lower() == 'instrume'):
+                ind_instrume = i
 
-            if (self.ind_instrume == -1):
-                if (self.colnames[i].lower() == 'instrument'):
-                    self.ind_instrume = i
+            if (ind_instrume == -1): 
+                if (colnames[i].lower() == 'instrument'):
+                    ind_instrume = i
+            
+            if (colnames[i].lower() == 'koaid'):
+                ind_koaid = i
 
-            if (self.colnames[i].lower() == 'koaid'):
-                self.ind_koaid = i
-
-            if (self.colnames[i].lower() == 'filehand'):
-                self.ind_filehand = i
+            if (colnames[i].lower() == 'filehand'):
+                ind_filehand = i
              
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'self.ind_instrume= {self.ind_instrume:d}')
-            logging.debug (f'self.ind_koaid= {self.ind_koaid:d}')
-            logging.debug (f'self.ind_filehand= {self.ind_filehand:d}')
+            logging.debug (f'ind_instrume= {ind_instrume:d}')
+            logging.debug (f'ind_koaid= {ind_koaid:d}')
+            logging.debug (f'ind_filehand= {ind_filehand:d}')
       
-        if (self.ind_instrume == -1):
+        if (ind_instrume == -1):
             print ('Column [instrume] is required in the metadata file for downloading data.')
             return
             #sys.exit()
         
-        if (self.ind_koaid == -1):
+        if (ind_koaid == -1):
             print ('Column [koaid] is required in the metadata file for downloading data.')
             return
             #sys.exit()
         
-        if (self.ind_filehand == -1):
+        if (ind_filehand == -1):
             print ('Column [filehand] is required in the metadata file for downloading data.')
             return
             #sys.exit()
     
-        if (self.len_tbl == 0):
+        if (len_tbl == 0):
             print ('There is no data in the metadata table.')
             return
             #sys.exit()
         
+        lev0file = 1 
+        if ('lev0file' in kwargs): 
+            lev0file = kwargs.get('lev0file')
+         
         calibfile = 0 
         if ('calibfile' in kwargs): 
             calibfile = kwargs.get('calibfile')
          
-        if self.debug:
+        lev1file = 0 
+        if ('lev1file' in kwargs): 
+            lev1file = kwargs.get('lev1file')
+         
+        calibdir = 1 
+        if ('calibdir' in kwargs): 
+            calibdir = kwargs.get('calibdir')
+         
+        if debug:
             logging.debug ('')
+            logging.debug (f'lev0file= {lev0file:d}')
             logging.debug (f'calibfile= {calibfile:d}')
+            logging.debug (f'lev1file= {lev1file:d}')
+            logging.debug (f'calibdir= {calibdir:d}')
+
+        """
+        if ((lev0file == 0) and \
+            (lev1file == 0) and \
+            (calibfile == 0)):
+            
+            print ('Please choose which types of data you wish to download: lev0file, lev1file, and calibfile, more than one choice is allowed.')
+            return
+        """
 
         srow = 0;
-        erow = self.len_tbl - 1
+        erow = len_tbl - 1
 
         if ('start_row' in kwargs): 
             srow = kwargs.get('start_row')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'srow= {srow:d}')
      
         if ('end_row' in kwargs): 
             erow = kwargs.get('end_row')
         
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'erow= {erow:d}')
      
         if (srow < 0):
             srow = 0 
-        if (erow > self.len_tbl - 1):
-            erow = self.len_tbl - 1 
+        if (erow > len_tbl - 1):
+            erow = len_tbl - 1 
  
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'srow= {srow:d}')
             logging.debug (f'erow= {erow:d}')
      
 
 #
-#    create outdir if it doesn't exist
+#    create outdir for lev0, lev1, calib data if it doesn't exist
 #
 #    decimal mode work for both python2.7 and python3;
 #
@@ -1733,79 +1856,132 @@ class Archive:
 #
         d1 = int ('0775', 8)
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'd1= {d1:d}')
-     
+#
+#    lev0 subdir 
+#
+        outdir_lev0 = outdir
+        if (lev0file == 1):
+            outdir_lev0 = outdir + '/lev0'
+            
         try:
-            os.makedirs (self.outdir, mode=d1, exist_ok=True) 
+            os.makedirs (outdir_lev0, mode=d1, exist_ok=True) 
 
         except Exception as e:
             
-            self.msg = f'Failed to create {self.outdir:s}: {str(e):s}'
-            print (self.msg)
+            msg = f'Failed to create {outdir:s}: {str(e):s}'
+            print (msg)
             return
             #sys.exit()
-
-        if self.debug:
+   
+        if debug:
             logging.debug ('')
-            logging.debug ('returned os.makedirs') 
-
+            logging.debug ('returned os.makedirs for lev0 data subdir') 
 
 #
-#    retrieve baseurl from conf class;
+#    lev1 subdir 
 #
-        self.baseurl = conf.server
+        outdir_lev1 = outdir
+        if (lev1file == 1):
+            outdir_lev1 = outdir + '/lev1'
+            
+        try:
+            os.makedirs (outdir_lev1, mode=d1, exist_ok=True) 
 
-        if ('server' in kwargs):
-            self.baseurl = kwargs.get ('server')
+        except Exception as e:
+            
+            msg = f'Failed to create {outdir:s}: {str(e):s}'
+            print (msg)
+            return
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
+            logging.debug ('returned os.makedirs for lev1 data subdir') 
+
+#
+#    calib subdir 
+#
+        outdir_calib = outdir
+        if (calibfile == 1):
+            
+            if (lev0file == 0):
+                outdir_calib = outdir + '/calib'
+            else:
+                if (calibdir == 1):
+                    outdir_calib = outdir + '/calib'
+                else:
+                    outdir_calib = outdir + '/lev0'
+
+        try:
+            os.makedirs (outdir_calib, mode=d1, exist_ok=True) 
+
+        except Exception as e:
+            
+            msg = f'Failed to create {outdir:s}: {str(e):s}'
+            print (msg)
+            return
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('returned os.makedirs for calib data subdir') 
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'outdir_lev0= {outdir_lev0:s}')
+            logging.debug (f'outdir_lev1= {outdir_lev1:s}')
+            logging.debug (f'outdir_calib= {outdir_calib:s}')
 
 #
 #    urls for nph-getKoa, and nph-getCaliblist
 #
-        self.getkoa_url = self.baseurl + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
-        self.caliblist_url = self.baseurl+ 'cgi-bin/KoaAPI/nph-getCaliblist?'
+        self.getkoa_url = self.baseurl + \
+            'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
+        self.caliblist_url = self.baseurl + \
+            'cgi-bin/KoaAPI/nph-getCaliblist?'
+        self.lev1list_url = self.baseurl + 'cgi-bin/KoaAPI/nph-getL1list?'
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'self.getkoa_url= {self.getkoa_url:s}')
-            logging.debug (f'self.caliblist_url= {self.caliblist_url:s}')
+            logging.debug (f'getkoa_url= {self.getkoa_url:s}')
+            logging.debug (f'caliblist_url= {self.caliblist_url:s}')
 
 
         instrument = '' 
         koaid = ''
         filehand = ''
-        self.ndnloaded = 0
-        self.ndnloaded_calib = 0
-        self.ncaliblist = 0
+        ndnloaded_lev0 = 0
+        
+        nlev1list = 0
+        ndnloaded_lev1 = 0
+        
+        ncaliblist = 0
+        ndnloaded_calib = 0
       
         nfile = erow - srow + 1   
         
-        print (f'Start downloading {nfile:d} FITS data you requested;')
-        print (f'please check your outdir: {self.outdir:s} for  progress.')
+        print (f'Start downloading {nfile:d} koaid data you requested;')
+        print (f'please check your outdir: {outdir:s} for  progress ....')
  
         for l in range (srow, erow+1):
         #
-        #{ for loop for download FITS files
+        #{ for loop for download all files (lev0, lev1, calib)
         #
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'l= {l:d}')
                 logging.debug ('')
-                logging.debug ('self.astropytbl[l]= ')
-                logging.debug (self.astropytbl[l])
+                logging.debug ('astropytbl[l]= ')
+                logging.debug (astropytbl[l])
                 logging.debug ('instrument= ')
-                logging.debug (self.astropytbl[l][self.ind_instrume])
+                logging.debug (astropytbl[l][ind_instrume])
 
-            instrument = self.astropytbl[l][self.ind_instrume]
-            koaid = self.astropytbl[l][self.ind_koaid]
-            filehand = self.astropytbl[l][self.ind_filehand]
+            instrument = astropytbl[l][ind_instrume]
+            koaid = astropytbl[l][ind_koaid]
+            filehand = astropytbl[l][ind_filehand]
 	    
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('type(instrument)= ')
                 logging.debug (type(instrument))
@@ -1813,7 +1989,7 @@ class Archive:
             
             if (type (instrument) is bytes):
                 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug ('bytes: decode')
 
@@ -1832,60 +2008,282 @@ class Archive:
                 instrument = 'LRIS'
  
             ind = -1
-            ind = instrument.find ('LRIS')
-            if (ind >= 0):
-                instrument = 'LRIS'
- 
-            ind = -1
             ind = instrument.find ('NIRS')
             if (ind >= 0):
                 instrument = 'NIRSPEC'
-
-            if self.debug:
+  
+            if debug:
                 logging.debug ('')
                 logging.debug (f'l= {l:d} koaid= {koaid:s}')
                 logging.debug (f'filehand= {filehand:s}')
                 logging.debug (f'instrument= {instrument:s}')
 
-#
-#   get lev0 files
-#
-            url = self.getkoa_url + 'filehand=' + filehand
-            filepath = self.outdir + '/' + koaid
-                
-            if self.debug:
-                logging.debug ('')
-                logging.debug (f'filepath= {filepath:s}')
-                logging.debug (f'url= {url:s}')
-
-#
-#    if file doesn't exist: download
-#
-            isExist = os.path.exists (filepath)
-	    
-            if (not isExist):
-
-                try:
-                    self.__submit_request (url, filepath, cookiejar)
-                    self.ndnloaded = self.ndnloaded + 1
-
-                    self.msg =  'Returned file written to: ' + filepath   
-           
-                    if self.debug:
-                        logging.debug ('')
-                        logging.debug ('returned __submit_request')
-                        logging.debug (f'self.msg= {self.msg:s}')
+            #
+            #   get lev0 files
+            #
+            if (lev0file == 1):
             
-                except Exception as e:
-                    print (f'File [{koaid:s}] download: {str(e):s}')
+                url = self.getkoa_url + 'filehand=' + filehand
+                filepath = outdir_lev0 + '/' + koaid
+                
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'filepath= {filepath:s}')
+                    logging.debug (f'url= {url:s}')
 
+                #
+                #    if file doesn't exist: download
+                #
+                isExist = os.path.exists (filepath)
+	    
+                if (not isExist):
+
+                    try:
+                        self.__submit_request (url, filepath, cookiejar)
+                        ndnloaded_lev0 = ndnloaded_lev0 + 1
+
+                        msg =  'Returned file written to: ' + filepath   
+           
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('returned __submit_request')
+                            logging.debug (f'self.msg= {msg:s}')
+            
+                    except Exception as e:
+                        print (f'File [{koaid:s}] download error: {str(e):s}')
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'ndnloaded_lev0= {ndnloaded_lev0:d}')
+            
+
+            if (lev1file == 1):
+            #
+            # { if leve1file == 1   
+            #
+                if ((instrument.lower() != "nirc2") and \
+                    (instrument.lower() != "osiris") and \
+                    (instrument.lower() != "lws") and \
+                    (instrument.lower() != "hires") and \
+                    (instrument.lower() != "nirspec")):
+               
+                    if (l == srow):
+                        print (f'Instrument [{instrument:s}] does not have level1 data.')
+                else:
+                #
+                # {   this instrument might have lev1 data
+                #
+                    #
+                    # { get lev1 list 
+                    #
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('lev1file=1: downloading lev1list')
+	  
+                    koaid_base = '' 
+                    ind = -1
+                    ind = koaid.rfind ('.')
+                    if (ind > 0):
+                        koaid_base = koaid[0:ind]
+                    else:
+                        koaid_base = koaid
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'koaid_base= {koaid_base:s}')
+	    
+                    lev1list = outdir_lev1 + '/' + koaid_base + '.lev1list.json'
+                
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'lev1list= {lev1list:s}')
+
+                    isExist = os.path.exists (lev1list)
+	    
+                    if (not isExist):
+
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('downloading lev1list')
+	    
+                        url = self.lev1list_url \
+                            + 'instrument=' + instrument \
+                            + '&koaid=' + koaid \
+                            + '&filehand=' + filehand
+
+
+                        if debug:
+                            logging.debug ('')
+                            logging.debug (f'lev1list url= {url:s}')
+
+                        try:
+                            #self.__submit_request (url, lev1list, cookiejar, \
+                            #    debug=1)
+                            self.__submit_request (url, lev1list, cookiejar)
+                            
+                            nlev1list = nlev1list + 1
+
+                            msg =  'Returned file written to: ' + lev1list 
+           
+                            if debug:
+                                logging.debug ('')
+                                logging.debug ('returned __submit_request')
+                                logging.debug (f'msg= {msg:s}')
+                                logging.debug (f'nlev1list= {nlev1list:d}')
+            
+                        except Exception as e:
+                        
+                            msg = 'Failed to get level 1 file list ' \
+                                + 'for koaid: ' + koaid
+                        
+                            print (f'{msg:s}')
+                            print (str(e))
+                        
+                    #
+                    # } end get lev1 list 
+                    #
+                    #
+                    #    check again after lev1list is successfully downloaded, 
+                    #     
+                
+                    nlev1file = 0
+                
+                    isExist = os.path.exists (lev1list)
+                
+                    if (not isExist):
+                        msg = 'Failed to get level 1 data list ' \
+                            + 'for koaid: ' + koaid
+                        
+                        print (f'{msg:s}')
+                
+                    else:
+                    #     
+                    #  extract koaid and nlev1file from json strcuture
+                    #     
+                
+                        jsonData = None
+                        koaid = ''
+                        try:
+                            with open (lev1list) as fp:
+	    
+                                jsonData = json.load (fp) 
+                                koaid = jsonData["input"]["koaid"]
+                                nlev1file = int(jsonData["result"]["nlev1file"])
+                            fp.close() 
+                            
+                        except Exception as e:
+        
+                            if debug:
+                                logging.debug ('')
+                                logging.debug ( \
+                                    f'lev1list: {lev1list:s} load error')
+
+                            msg = 'Failed to read ' + lev1list	
+                            print (f'{msg:s}')
+                            fp.close() 
+
+                        if debug:
+                            logging.debug ('')
+                            logging.debug (f'koaid= {koaid:s}')
+                            logging.debug (f'nlev1file= {nlev1file:d}')
+  
+                    if (nlev1file == 0):
+                    
+                        if debug:
+                            logging.debug ('')
+                            logging.debug (f'got here:')
+                            logging.debug (f'nlev1file= {nlev1file:d}')
+  
+                        msg = 'No level 1 data found for koaid: [' \
+                            + koaid + ']'
+                    
+                        print (f'{msg:s}')
+                
+                    else:   
+                    #
+                    # { nlev1file > 0: download lev1file
+                    #
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('list exist: downloading lev1files')
+
+                    
+                        #if ((instrument.lower() != "hires") or \
+                        #    (instrument.lower() != "nirspec")):
+                        #    print ('')
+                        #    print ( \
+                        #        f'Downloading [{koaid:s}] level 1 files ....')
+                        
+                        #print ('')
+                        #print (f'Downloading [{koaid:s}] level 1 files ....')
+                        
+                        try:
+                            nlev1 = self.__download_lev1files (jsonData, \
+                                cookiejar, outdir_lev1)
+                        
+                            #nlev1 = self.__download_lev1files (jsonData, \
+                            #    cookiejar, outdir_lev1, debug=1)
+                    
+                            if debug:
+                                logging.debug ('')
+                                logging.debug (f'returned __download_lev1files')
+                                logging.debug (f'nlev1= {nlev1:d}')
+                        
+                            ndnloaded_lev1 = ndnloaded_lev1 + nlev1
+                    
+                            if debug:
+                                logging.debug ('')
+                                logging.debug ( \
+                                    f'ndnloaded_lev1= {ndnloaded_lev1:d}')
+                           
+                            msg = str(nlev1) + ' level1 files downloaded ' \
+                                + 'for koaid: [' + koaid + ']'
+
+                            if debug:
+                                logging.debug ('')
+                                logging.debug (f'msg= {msg:s}')
+                           
+                            #print (f'{msg:s}')
+         
+                            if debug:
+                                logging.debug ('')
+                                logging.debug ('returned __download_lev1files')
+                                logging.debug (f'{nlev1:d} downloaded')
+                                logging.debug ( \
+                                    f'ndnloaded_lev1= {ndnloaded_lev1:d}')
+                
+                        except Exception as e:
+                
+                            msg = 'Error downloading files in lev1list [' + \
+                                lev1list + ']: ' +  str(e)
+                            print (f'{msg:s}')
+                        
+                            if debug:
+                                logging.debug ('')
+                                logging.debug (f'errmsg= {msg:s}')
+
+                    #
+                    # } download lev1 files
+                    #     
+                #
+                # } end lev1 files dnload for the instrument
+                #     
+            # 
+            #} endif (lev1file == 1):
+            #
+                        
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('done lev1 dnload')
+                    logging.debug (f'ndnloaded= {ndnloaded_lev1:d}')
+                
 
             if (calibfile == 1):
             #
             # {   if calibfile == 1: download calibfile
             #
     
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug ('calibfile=1: downloading calibfiles')
 	    
@@ -1897,51 +2295,95 @@ class Archive:
                 else:
                     koaid_base = koaid
 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'koaid_base= {koaid_base:s}')
 	    
-                caliblist = self.outdir + '/' + koaid_base + '.caliblist.json'
+                caliblist = outdir_calib + '/' + koaid_base + '.caliblist.json'
+                caliblist_ipac = outdir_calib + '/' + koaid_base + '.caliblist.tbl'
                 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'caliblist= {caliblist:s}')
+                    logging.debug (f'caliblist_ipac= {caliblist_ipac:s}')
 
+                #
+                #    download caliblist (json)
+                #
                 isExist = os.path.exists (caliblist)
 	    
                 if (not isExist):
 
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
-                        logging.debug ('downloading calibfiles')
+                        logging.debug ('downloading caliblist')
 	    
                     url = self.caliblist_url \
                         + 'instrument=' + instrument \
                         + '&koaid=' + koaid
 
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug (f'caliblist url= {url:s}')
 
                     try:
                         self.__submit_request (url, caliblist, cookiejar)
-                        self.ncaliblist = self.ncaliblist + 1
+                        ncaliblist = ncaliblist + 1
 
-                        self.msg =  'Returned file written to: ' + caliblist   
+                        msg =  'Returned file written to: ' + caliblist   
            
-                        if self.debug:
+                        if debug:
                             logging.debug ('')
                             logging.debug ('returned __submit_request')
-                            logging.debug (f'self.msg= {self.msg:s}')
+                            logging.debug (f'msg= {msg:s}')
             
                     except Exception as e:
                         #print (f'File [{caliblist:s}] download: {str(e):s}')
-                        #self.msg = 'Error downloading caliblist [' + \
+                        #msg = 'Error downloading caliblist [' + \
                         #    caliblist + ']:' + str(e)
                         
-                        self.msg = 'No associated calibration list for ' + \
+                        msg = 'No associated calibration list for ' + \
                             koaid
-                        print (f'{self.msg:s}')
+                        print (f'{msg:s}')
+                        continue 
+                         
+
+                #
+                #    download caliblist_ipac
+                #
+                isExist = os.path.exists (caliblist_ipac)
+	    
+                if (not isExist):
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('downloading caliblist_ipac')
+	    
+                    url = self.caliblist_url \
+                        + 'instrument=' + instrument \
+                        + '&koaid=' + koaid + '&format=ipac'
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'caliblist_ipac url= {url:s}')
+
+                    try:
+                        self.__submit_request (url, caliblist_ipac, cookiejar)
+                        msg =  'Returned file written to: ' + caliblist_ipac   
+           
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('returned __submit_request')
+                            logging.debug (f'msg= {msg:s}')
+            
+                    except Exception as e:
+                        #print (f'File [{caliblist:s}] download: {str(e):s}')
+                        #msg = 'Error downloading caliblist_ipac [' + \
+                        #    caliblist_ipac + ']:' + str(e)
+                        
+                        msg = 'No associated calibration list for ' + \
+                            koaid
+                        print (f'{msg:s}')
                         continue 
                          
 
@@ -1952,63 +2394,372 @@ class Archive:
                 isExist = os.path.exists (caliblist)
                                   
                 if (isExist):
+                #
+                #{ download_calibfiles:
+                #
 
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug ('list exist: downloading calibfiles')
-	    
+	   
+                    #if ((instrument.lower() != "hires") or \
+                    #    (instrument.lower() != "nirspec")):
+                    #    print ('')
+                    #    print ( \
+                    #        f'Downloading [{koaid:s}] calibration files ....')
+                    
+                    #print ('')
+                    #print (f'Downloading [{koaid:s}] calibration files ....')
+                        
                     try:
+                        #ncalibs = self.__download_calibfiles ( \
+                        #    caliblist, cookiejar, outdir_calib)
+                        
                         ncalibs = self.__download_calibfiles ( \
-                            caliblist, cookiejar)
-                        self.ndnloaded_calib = self.ndnloaded_calib + ncalibs
+                            caliblist, cookiejar, outdir_calib, deubg=1)
+                        ndnloaded_calib = ndnloaded_calib + ncalibs
                 
-                        if self.debug:
+                        if debug:
                             logging.debug ('')
                             logging.debug ('returned __download_calibfiles')
                             logging.debug (f'{ncalibs:d} downloaded')
 
+                        msg = str(ncalibs) + ' calibration files downloaded ' \
+                            + 'for koaid: [' + koaid + ']'
+                        #print (msg)
+
                     except Exception as e:
                 
-                        self.msg = 'Error downloading files in caliblist [' + \
+                        msg = 'Error downloading files in caliblist [' + \
                             filepath + ']: ' +  str(e)
                         
-                        if self.debug:
+                        if debug:
                             logging.debug ('')
-                            logging.debug (f'errmsg= {self.msg:s}')
-
-#                endif (download_calibfiles):
+                            logging.debug (f'errmsg= {msg:s}')
+                
+                #
+                #} endif (download_calibfiles):
+                #
             # 
             #} endif (calibfile == 1):
             #
+            
         #
         #}        endfor l in range (srow, erow+1)
         #
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'{self.len_tbl:d} files in the table;')
-            logging.debug (f'{self.ndnloaded:d} files downloaded.')
-            logging.debug (f'{self.ncaliblist:d} calibration list downloaded.')
+            logging.debug (f'{len_tbl:d} files in the table;')
+            logging.debug (f'{ndnloaded_lev0:d} lev0 files downloaded.')
+            logging.debug (f'{nlev1list:d} lev1list downloaded.')
             logging.debug (\
-                f'{self.ndnloaded_calib:d} calibration files downloaded.')
-
-        print (f'A total of new {self.ndnloaded:d} FITS files downloaded.')
+                f'{ndnloaded_lev1:d} lev1files downloaded.')
+            logging.debug (f'{ncaliblist:d} calibration list downloaded.')
+            logging.debug (\
+                f'{ndnloaded_calib:d} calibration files downloaded.')
+        #
+        #    print out total count of downloaded files
+        #
+        print ('')
+        if (lev0file == 1):
+            print (f'A total of {ndnloaded_lev0:d} new lev0 FITS files downloaded.')
  
+        if (lev1file == 1):
+            
+            if ((instrument.lower() == "nirc2") or \
+                (instrument.lower() == "osiris") or \
+                (instrument.lower() == "lws") or \
+                (instrument.lower() == "hires") or \
+                (instrument.lower() == "nirspec")):
+               
+                print (f'{nlev1list:d} new lev1 list downloaded.')
+                print (f'{ndnloaded_lev1:d} new lev1 files downloaded.')
+        
         if (calibfile == 1):
-            print (f'{self.ncaliblist:d} new calibration list downloaded.')
-            print (f'{self.ndnloaded_calib:d} new calibration FITS files downloaded.')
+            print (f'{ncaliblist:d} new calibration list downloaded.')
+            print (f'{ndnloaded_calib:d} new calibration FITS files downloaded.')
         return
 #
 #} end Archive.download
 #
     
 
-    def __download_calibfiles (self, listpath, cookiejar):
+    def __download_lev1files (self, jsonData, cookiejar, outdir_lev1, \
+        **kwargs):
+#
+#{ Archive.__download_lev1files
+#
+        debug = 0
+        
+        if ('debug' in kwargs):
+            debugstr = kwargs.get ('debug')
+            debug = int(debugstr)
+   
+        if debug:
+            logging.debug ('')
+            logging.debug (f'Enter __download_lev1files:')
+            logging.debug (f'outdir_lev1= {outdir_lev1:s}')
+
+#
+#    read input lev1list JSON file
+#
+        instrument = jsonData["input"]["instrument"]
+        koaid = jsonData["input"]["koaid"]
+        filehand = jsonData["input"]["filehand"]
+        nlev1file = int(jsonData["result"]["nlev1file"])
+        lev1subdir_prefix = jsonData["result"]["lev1subdir_prefix"]
+                
+        if debug:
+            logging.debug ('')
+            logging.debug (f'lev1subdir_prefix= {lev1subdir_prefix:s}')
+            logging.debug (f'instrument= {instrument:s}')
+            logging.debug (f'koaid= {koaid:s}')
+            logging.debug (f'filehand= {filehand:s}')
+            logging.debug (f'nlev1file= {nlev1file:d}')
+        
+        data = ''
+        if ((instrument.lower() == 'nirc2') or \
+            (instrument.lower() == 'osiris') or \
+            (instrument.lower() == 'lws')):
+                
+            data = jsonData["result"]["lev1file"]
+                    
+        elif ((instrument.lower() == 'hires') or \
+            (instrument.lower() == 'nirspec')):
+
+            data = jsonData["result"]["data"]
+                    
+        if debug:
+            logging.debug ('')
+            logging.debug (f'data:')
+            logging.debug (data)
+
+
+#
+#    retrieve koaid from lev1list json structure and download files
+#
+        if debug:
+            logging.debug ('Start downloading from lev1list:')
+        
+
+        filehand_lev1 = ''
+        lev1file = ''
+        nrec = 0 
+        nsubdir = 0 
+        
+        nrec_total = 0
+
+        if ((instrument.lower() == 'nirc2') or \
+            (instrument.lower() == 'osiris') or \
+            (instrument.lower() == 'lws')):
+        #
+        # { if n2, os, lw
+        #
+            if debug:
+                logging.debug ('here0')
+            
+            if debug:
+                logging.debug (f'nlev1file= {nlev1file:d}')
+
+            for ind in range (nlev1file):
+
+                if debug:
+                    logging.debug (f'downloadlev1files: ind= {ind:d}')
+
+                lev1file = data[ind]
+                filehand_lev1 = lev1subdir_prefix + '/' + lev1file 
+  
+                if debug:
+                    logging.debug (f'lev1file= {lev1file:s}')
+                    logging.debug (f'filehand_lev1= {filehand_lev1:s}')
+
+                filepath = outdir_lev1 + '/' + lev1file 
+            
+                if debug:
+                    logging.debug (f'filepath= {filepath:s}')
+
+                
+#
+#    if file exists, skip
+#
+                isExist = os.path.exists (filepath)
+	    
+                if (isExist):
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'isExist: {isExist:d}: skip')
+                     
+                    continue
+              
+                url = self.baseurl + 'cgi-bin/KoaAPI/nph-dnloadL1data?' \
+                    + 'instrument=' + instrument + '&koaid=' + koaid \
+                    + '&filehand=' + filehand_lev1
+                 
+                if debug:
+                    logging.debug (f'url= {url:s}')
+
+                try:
+                    self.__submit_request (url, filepath, cookiejar)
+                    nrec_total = nrec_total + 1
+                
+                    msg = 'lev1 file [' + filepath + '] downloaded.'
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('returned __submit_request')
+                        logging.debug (f'msg: {msg:s}')
+                        logging.debug (f'nrec_total= {nrec_total:d}')
+            
+            
+                except Exception as e:
+                
+                    print (f'lev1 file download error: {str(e):s}')
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'instrument: {instrument:s}')
+                logging.debug (f'{nrec_total:d} files downloaded.')
+            
+        #
+        # } end if (n2,lws,os)
+        #
+        elif ((instrument.lower() == 'hires') or \
+            (instrument.lower() == 'nirspec')):
+
+        #
+        # { if (ns,hi)
+        #
+            nsubdir = len (data)
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'nsubdir= {nsubdir:d}')
+                logging.debug (f'lev1subdir_prefix= {lev1subdir_prefix:s}')
+            
+            lev1filepath = ''
+            subdir = ''
+            lev1files = ''
+            filehand_lev1 = ''
+            url = ''
+            d1 = int('0755', 8)
+            nrec = 0
+            for l in range (nsubdir):
+            #for l in range (0, 1):
+
+                subdir = data[l]["subdir"] 
+                lev1files = data[l]["lev1files"] 
+                nrec = len (lev1files) 
+              
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'l= {l:d} subdir= {subdir:s}')
+                    logging.debug (f'nrec= {nrec:d}')
+                    #logging.debug (f'lev1files=')
+                    #logging.debug (lev1files)
+        
+        
+                for i in range (nrec):
+                #for i in range (0, 1):
+
+
+                    if debug:
+                        logging.debug (f'downloadlev1files: i= {i:d}')
+
+                    lev1file = lev1files[i]
+                    
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'lev1file= {lev1file:s}')
+                    
+                    filehand_lev1 = \
+                        lev1subdir_prefix + '/' + subdir + '/' + lev1file 
+                    
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'filehand_lev1= {filehand_lev1:s}')
+                    
+                    lev1filepath = outdir_lev1 + '/' + subdir
+                    
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'lev1filepath= {lev1filepath:s}')
+                    
+                    os.makedirs (lev1filepath, mode=d1, exist_ok=True) 
+
+                    filepath = lev1filepath + '/'+ lev1file 
+            
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'filepath= {filepath:s}')
+
+                    url = self.baseurl + 'cgi-bin/KoaAPI/nph-dnloadL1data?' \
+                        + 'instrument=' + instrument + '&koaid=' + koaid \
+                        + '&filehand=' + filehand_lev1
+                    
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'url= {url:s}')
+                     
+#
+#    if file exists, skip
+#
+                    isExist = os.path.exists (filepath)
+	    
+                    if (isExist):
+                        if debug:
+                            logging.debug ('')
+                            logging.debug (f'isExist: {isExist:d}: skip')
+                     
+                        continue
+
+                    try:
+                        self.__submit_request (url, filepath, cookiejar)
+                
+                        msg = 'lev1 file [' + filepath + '] downloaded.'
+                        nrec_total = nrec_total + 1
+
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('returned __submit_request')
+                            logging.debug (f'msg: {msg:s}')
+                            logging.debug (f'nrec_total= {nrec_total:d}')
+            
+                    except Exception as e:
+                
+                        print (f'error downloading lev1 file {lev1file:s}: {str(e):s}')
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'instrument: {instrument:s}')
+                logging.debug (f'{nrec_total:d} files downloaded.')
+        
+        #
+        # } end elif ns, hi
+        #
+        if debug:
+            logging.debug ('')
+            logging.debug (f'{nrec_total:d} files downloaded.')
+
+        return (nrec_total)
+#
+#} end  Archive.__download_lev1files
+#
+
+
+    def __download_calibfiles (self, listpath, cookiejar, outdir_calib, \
+        **kwargs):
 #
 #{ Archive.__download_calibfiles
 #
+        debug = 0
+        
+        if ('debug' in kwargs):
+            debugstr = kwargs.get ('debug')
+            debug = int(debugstr)
     
-        if self.debug:
+    
+        if debug:
             logging.debug ('')
             logging.debug (f'Enter __download_calibfiles: {listpath:s}')
 
@@ -2027,46 +2778,50 @@ class Archive:
 
         except Exception as e:
         
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'caliblist: {caliblist:s} load error')
 
-            self.errmsg = 'Failed to read ' + listpath	
+            errmsg = 'Failed to read ' + listpath	
 	
             fp.close() 
             
-            raise Exception (self.errmsg)
+            raise Exception (errmsg)
 
             return
 
         nrec = len(data)
     
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'downloadCalibfiles: nrec= {nrec:d}')
 
         if (nrec == 0):
 
-            self.status = 'error'	
-            self.errmsg = 'No data found in the caliblist: ' + listpath
+            status = 'error'	
+            errmsg = 'No data found in the caliblist: ' + listpath
 	    
-            raise Exception (self.errmsg)
+            raise Exception (errmsg)
 
 
 #
 #    retrieve koaid from caliblist json structure and download files
 #
-        ndnloaded = 0
-        for ind in range (0, nrec):
+        if debug:
+            logging.debug ('')
+            logging.debug (f'got here: nrec= {nrec:d}')
 
-            if self.debug:
+        ndnloaded = 0
+        for ind in range (nrec):
+
+            if debug:
                 logging.debug (f'downloadCalibfiles: ind= {ind:d}')
 
             koaid = data[ind]['koaid']
             instrument = data[ind]['instrument']
             filehand = data[ind]['filehand']
             
-            if self.debug:
+            if debug:
                 logging.debug (f'instrument= {instrument:s}')
                 logging.debug (f'koaid= {koaid:s}')
                 logging.debug (f'filehand= {filehand:s}')
@@ -2076,9 +2831,9 @@ class Archive:
 #
             url = self.getkoa_url + 'filehand=' + filehand
                 
-            filepath = self.outdir + '/' + koaid
+            filepath = outdir_calib + '/' + koaid
                 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'filepath= {filepath:s}')
                 logging.debug (f'url= {url:s}')
@@ -2089,7 +2844,7 @@ class Archive:
             isExist = os.path.exists (filepath)
 	    
             if (isExist):
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'isExist: {isExist:d}: skip')
                      
@@ -2099,20 +2854,19 @@ class Archive:
                 self.__submit_request (url, filepath, cookiejar)
                 ndnloaded = ndnloaded + 1
                 
-                self.msg = 'calib file [' + filepath + '] downloaded.'
+                msg = 'calib file [' + filepath + '] downloaded.'
 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug ('returned __submit_request')
-                    logging.debug (f'self.msg: {self.msg:s}')
+                    logging.debug (f'msg: {msg:s}')
             
             except Exception as e:
-                
                 print (f'calib file download error: {str(e):s}')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'{self.ndnloaded:d} files downloaded.')
+            logging.debug (f'nfnlosfrf= {ndnloaded:d}')
 
         return (ndnloaded)
 #
@@ -2120,12 +2874,17 @@ class Archive:
 #
     
 
-    def __submit_request(self, url, filepath, cookiejar):
+    def __submit_request(self, url, filepath, cookiejar, **kwargs):
 #
 #{ Archive.__submit_request
 #
+        debug = 0
+        
+        if ('debug' in kwargs):
+            debugstr = kwargs.get ('debug')
+            debug = int(debugstr)
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('Enter database.__submit_request:')
             logging.debug (f'url= {url:s}')
@@ -2135,7 +2894,7 @@ class Archive:
             
                 for cookie in cookiejar:
                     
-                    if self.debug:
+                    if debug:
                         logging.debug ('')
                         logging.debug ('cookie saved:')
                         logging.debug (f'cookie.name= {cookie.name:s}')
@@ -2143,102 +2902,107 @@ class Archive:
                         logging.debug (f'cookie.domain= {cookie.domain:s}')
             
         try:
-            self.response =  requests.get (url, cookies=cookiejar, \
-                stream=True)
+            self.response =  requests.get (url, stream=True, cookies=cookiejar)
 
-            if self.debug:
+            #self.response =  requests.get (url, cookies=cookiejar, \
+            #    stream=True)
+
+            if debug:
                 logging.debug ('')
+                logging.debug ('-------------------------------------')
+                logging.debug ('URL:' + url)
+                logging.debug ('Cookiejar type:')
+                logging.debug (type(cookiejar))
+                
                 logging.debug ('request sent')
+                logging.debug ('done')
+                logging.debug ('')
+        
         
         except Exception as e:
             
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'exception: {str(e):s}')
 
-            self.status = 'error'
-            self.msg = 'Failed to submit the request: ' + str(e)
+            msg = 'Failed to submit the request: ' + str(e)
 	    
-            raise Exception (self.msg)
+            raise Exception (msg)
             return
                        
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('status_code:')
             logging.debug (self.response.status_code)
       
       
         if (self.response.status_code == 200):
-            self.status = 'ok'
-            self.msg = ''
+            msg = ''
         else:
-            self.status = 'error'
-            self.msg = 'Failed to submit the request'
+            msg = 'Failed to submit the request'
 	    
-            raise Exception (self.msg)
+            raise Exception (msg)
             return
                        
-            
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('headers: ')
             logging.debug (self.response.headers)
       
-      
-        self.content_type = ''
+        content_type = ''
         try:
-            self.content_type = self.response.headers['Content-type']
+            content_type = self.response.headers['Content-type']
         except Exception as e:
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'exception extract content-type: {str(e):s}')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
-            logging.debug (f'content_type= {self.content_type:s}')
-
-
-        if (self.content_type == 'application/json'):
+            logging.debug (f'content_type= {content_type:s}')
             
-            if self.debug:
+
+        if (content_type == 'application/json'):
+            
+            if debug:
                 logging.debug ('')
                 logging.debug (\
                     'return is a json structure: might be error message')
             
             jsondata = json.loads (self.response.text)
           
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('jsondata:')
                 logging.debug (jsondata)
 
  
-            self.status = ''
+            status = ''
             try: 
-                self.status = jsondata['status']
+                status = jsondata['status']
                 
-                if self.debug:
+                if debug:
                     logging.debug ('')
-                    logging.debug (f'self.status= {self.status:s}')
+                    logging.debug (f'status= {status:s}')
 
             except Exception as e:
 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'get status exception: e= {str(e):s}')
 
-            self.msg = '' 
+            msg = '' 
             try: 
-                self.msg = jsondata['msg']
+                msg = jsondata['msg']
                 
-                if self.debug:
+                if debug:
                     logging.debug ('')
-                    logging.debug (f'self.msg= {self.msg:s}')
+                    logging.debug (f'msg= {msg:s}')
 
             except Exception as e:
 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'extract msg exception: e= {str(e):s}')
 
@@ -2246,35 +3010,35 @@ class Archive:
             try: 
                 errmsg = jsondata['error']
                 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'errmsg= {errmsg:s}')
 
                 if (len(errmsg) > 0):
-                    self.status = 'error'
-                    self.msg = errmsg
+                    status = 'error'
+                    msg = errmsg
 
             except Exception as e:
 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'get error exception: e= {str(e):s}')
 
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
-                logging.debug (f'self.status= {self.status:s}')
-                logging.debug (f'self.msg= {self.msg:s}')
+                logging.debug (f'status= {status:s}')
+                logging.debug (f'msg= {msg:s}')
 
 
-            if (self.status == 'error'):
-                raise Exception (self.msg)
+            if (status == 'error'):
+                raise Exception (msg)
                 return
 
 #
 #    save to filepath
 #
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('save_to_file:')
        
@@ -2284,23 +3048,22 @@ class Archive:
                 for chunk in self.response.iter_content (chunk_size=1024):
                     fd.write (chunk)
             
-            self.msg =  'Returned file written to: ' + filepath   
+            msg =  'Returned file written to: ' + filepath   
 #            print (self.msg)
             
-            if self.debug:
+            if debug:
                 logging.debug ('')
-                logging.debug (self.msg)
+                logging.debug (msg)
 	
         except Exception as e:
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'exception: {str(e):s}')
 
-            self.status = 'error'
-            self.msg = 'Failed to save returned data to file: %s' % filepath
+            msg = 'Failed to save returned data to file: %s' % filepath
             
-            raise Exception (self.msg)
+            raise Exception (msg)
             return
 
         return
@@ -2309,12 +3072,18 @@ class Archive:
 #
                        
 
-    def __make_query (self, url):
+    def __make_query (self, url, **kwargs):
 #
 #{ Archive.__make_query
 #
+        debug = 0
+        
+        if ('debug' in kwargs):
+            debugstr = kwargs.get ('debug')
+            debug = int(debugstr)
+    
        
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug ('Enter __make_query:')
             logging.debug (f'url= {url:s}')
@@ -2323,7 +3092,7 @@ class Archive:
         try:
             response = requests.get (url, stream=True)
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug ('request sent')
 
@@ -2331,7 +3100,7 @@ class Archive:
            
             msg = 'Error: ' + str(e)
 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'exception: e= {str(e):s}')
             
@@ -2340,13 +3109,13 @@ class Archive:
 
         content_type = response.headers['content-type']
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'content_type= {content_type:s}')
        
         if (content_type == 'application/json'):
                 
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'response.text: {response.text:s}')
 
@@ -2356,14 +3125,14 @@ class Archive:
             try:
                 jsondata = json.loads (response.text)
                  
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug ('jsondata loaded')
                 
                 status = jsondata['status']
                 msg = jsondata['msg']
                 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug (f'status: {status:s}')
                     logging.debug (f'msg: {msg:s}')
@@ -2371,14 +3140,14 @@ class Archive:
             except Exception:
                 msg = 'returned JSON object parse error'
                 
-                if self.debug:
+                if debug:
                     logging.debug ('')
                     logging.debug ('JSON object parse error')
       
                 
             raise Exception (msg)
             
-            if self.debug:
+            if debug:
                 logging.debug ('')
                 logging.debug (f'msg= {msg:s}')
      
@@ -2523,10 +3292,6 @@ class objLookup:
 #
 #{  objLookup OK, extract parameters
         
-            if self.debug:
-                logging.debug ('')
-                logging.debug ('xxx1')
-       
             try:
                 self.source = jsondata['source']
             except Exception as e:
@@ -2611,10 +3376,6 @@ class objLookup:
 #
 #{  objLookup Error, extract errmsg
 #
-            if self.debug:
-                logging.debug ('')
-                logging.debug ('xxx2')
-       
             self.status = 'error'
             try:
                 self.msg = jsondata['msg']
@@ -2856,6 +3617,15 @@ class KoaTap:
             if debug:
                 logging.debug ('')
                 logging.debug (f'maxrec= {self.maxrec:d}')
+        
+        if ('propflag' in kwargs):
+            
+            self.propflag = kwargs.get('propflag')
+            self.datadict['propflag'] = self.propflag              
+            
+            if debug:
+                logging.debug ('')
+                logging.debug (f'propflag= {self.propflag:d}')
         
         self.oupath = ''
         if ('outpath' in kwargs):
@@ -3536,20 +4306,11 @@ class KoaTap:
             logging.debug (f'data written to file: {fpath:s}')
                 
         if (len(self.outpath) >  0):
-            
-            if debug:
-                logging.debug ('')
-                logging.debug (f'xxx1')
-                
             self.msg = 'Result downloaded to file [' + self.outpath + ']'
         else:
 #
 #    read temp outpath to astropy table
 #
-            if debug:
-                logging.debug ('')
-                logging.debug (f'xxx2')
-                
             self.astropytbl = Table.read (fpath, format='votable')	    
             self.msg = 'Result saved in memory (astropy table).'
       
@@ -3590,7 +4351,7 @@ class KoaTap:
                 logging.debug ('')
                 logging.debug (f'len_table= {len_table:d}')
        
-            for i in range (0, len_table):
+            for i in range (len_table):
 	    
                 row = self.astropytbl[i]
                 print (row)
@@ -4345,7 +5106,9 @@ class KoaJob:
 #    parse returned status xml structure for parameters
 #
         try:
-            soup = bs.BeautifulSoup (self.statusstruct, 'lxml')
+            soup = bs.BeautifulSoup (self.statusstruct, 'xml')
+       
+            #soup = bs.BeautifulSoup (self.statusstruct, 'lxml')
        
         except Exception as e:
 
@@ -4496,10 +5259,6 @@ class KoaJob:
        
         if (self.phase.lower() == 'completed'):
 
-            if self.debug:
-                logging.debug ('')
-                logging.debug ('xxx1: got here')
-            
             results = self.job['uws:results']
         
             if self.debug:
