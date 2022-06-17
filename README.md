@@ -19,11 +19,14 @@ Laboratory (JPL).
 
 If you used PyKOA in your research, please acknowledge KOA as follows: 
 
+
     "This research has made use of the Keck Observatory Archive (KOA), which 
     is operated by the W. M. Keck Observatory and the NASA Exoplanet Science 
     Institute (NExScI), under contract with the National Aeronautics and 
     Space Administration." 
 
+
 Please also acknowledge the PI(s) of datasets that have been accesses 
 through PyKOA.
+
 
