@@ -1820,8 +1820,8 @@ class Archive:
             logging.debug ('')
             logging.debug (f'workspace= {workspace:s}')
 
-        param ['debug'] = '/home/mihseh/MossAPI/src/pykoaTest/nirc2_pluto.debug'
-        param ['workspace'] = workspace
+        #param ['debug'] = '/home/mihseh/MossAPI/src/pykoaTest/nirc2_pluto.debug'
+        #param ['workspace'] = workspace
 
         data = urllib.parse.urlencode (param)
 
@@ -2077,7 +2077,7 @@ class Archive:
         Optional input:
 	----------------
         pngflag (0 or 1): 1 indicating that PNG files will be downloaded; 
-                          default is 0.
+                          default is 1.
         """
 
         debug = 0
@@ -2123,7 +2123,7 @@ class Archive:
             return 
 
 
-        pngflag = 0 
+        pngflag = 1 
         if ('pngflag' in kwargs):
             pngflag = int(kwargs.get ('pngflag'))
 
