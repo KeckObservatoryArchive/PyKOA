@@ -1575,7 +1575,7 @@ class Archive:
 	    ec (eccentricity),
 	    om (deg): longitude of ascending node, 
 	    w (deg) : argument of perihelion,
-	    in (deg): inclination,
+	    inc (deg): inclination,
 	  
             qr (au) (perihelion distance -- for Comet),
 	    tp (JD) (perihelion Julian date -- for Comet),
@@ -1593,7 +1593,7 @@ class Archive:
 	    -EC:    eccentricity,
 	    -OM:    longitude of ascending node,
             -W:     argument of perihelion,	
-	    -IN:    inclination,
+	    -INC:    inclination,
 	    -QR:    perihelion distance,
 	    -TP:    perihelion Julian date,
 
@@ -1638,7 +1638,7 @@ class Archive:
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
 
-        if self.debug:
+        if debug:
             logging.debug ('')
             logging.debug (f'baseurl= {self.baseurl:s}')
             logging.debug ('Enter query_moving_object:')
@@ -1736,31 +1736,31 @@ class Archive:
         if (orbitalinput == 1):
 
             if ('epoch' in kwargs): 
-                epoch = int (kwargs.get('epoch'))
+                epoch = kwargs.get('epoch')
 
-            if ('ecstr' in kwargs): 
-                ecstr = int (kwargs.get('ecstr'))
+            if ('ec' in kwargs): 
+                ecstr = kwargs.get('ec')
 
-            if ('omstr' in kwargs): 
-                omstr = int (kwargs.get('omstr'))
+            if ('om' in kwargs): 
+                omstr = kwargs.get('om')
 
-            if ('wstr' in kwargs): 
-                wstr = int (kwargs.get('wstr'))
+            if ('w' in kwargs): 
+                wstr = kwargs.get('w')
 
-            if ('instr' in kwargs): 
-                instr = int (kwargs.get('instr'))
+            if ('inc' in kwargs): 
+                instr = kwargs.get('inc')
 
-            if ('qrstr' in kwargs): 
-                qrstr = int (kwargs.get('qrstr'))
+            if ('qr' in kwargs): 
+                qrstr = kwargs.get('qr')
 
-            if ('tpstr' in kwargs): 
-                tpstr = int (kwargs.get('tpstr'))
+            if ('tp' in kwargs): 
+                tpstr = kwargs.get('tp')
 
-            if ('astr' in kwargs): 
-                astr = int (kwargs.get('astr'))
+            if ('a' in kwargs): 
+                astr = kwargs.get('a')
 
-            if ('m0str' in kwargs): 
-                m0str = int (kwargs.get('m0str'))
+            if ('m0' in kwargs): 
+                m0str = kwargs.get('m0')
 
             if debug:
                 logging.debug ('')
@@ -1820,15 +1820,13 @@ class Archive:
             logging.debug ('')
             logging.debug (f'workspace= {workspace:s}')
 
-        #param ['debug'] = '/home/mihseh/MossAPI/src/pykoaTest/nirc2_pluto.debug'
-        #param ['workspace'] = workspace
-
         data = urllib.parse.urlencode (param)
 
         url = moss_url + data 
 
         if debug:
             logging.debug ('')
+            logging.debug (f'moss full url sent to server:')
             logging.debug (f'url= {url:s}')
 
 #
@@ -1896,17 +1894,6 @@ class Archive:
                 logging.debug ('')
                 logging.debug (f'exception: e= {str(e):s}')
            
-        if debug:
-            logging.debug ('')
-            logging.debug (f'status_code= {response.status_code:d}')
-            logging.debug ('response: ')
-            logging.debug (response)
-            logging.debug (response.text)
-            logging.debug ('response.headers: ')
-            logging.debug (response.headers)
-            logging.debug ('')
-            logging.debug (f'status_code= {response.status_code:d}')
-
 
 #
 # {  if response is a json structure: parse for status;
@@ -1959,7 +1946,10 @@ class Archive:
 
 
         else:
-            print (response.text)
+            print ('response:')
+            print (response)
+            if (response is not None):
+                print (response.text)
             return
 
         if debug:
