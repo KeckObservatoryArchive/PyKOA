@@ -2130,51 +2130,51 @@ class Archive:
 #  
 #    convert octal 0775 to decimal: 493 
 #
-        d1 = int ('0775', 8)
+#        d1 = int ('0775', 8)
 
-        if debug:
-            logging.debug ('')
-            logging.debug (f'd1= {d1:d}')
+#        if debug:
+#            logging.debug ('')
+#            logging.debug (f'd1= {d1:d}')
      
-        try:
-            os.makedirs (outdir, mode=d1, exist_ok=True) 
+#        try:
+#            os.makedirs (outdir, mode=d1, exist_ok=True) 
 
-        except Exception as e:
+#        except Exception as e:
             
-            msg = f'Failed to create {outdir:s}: {str(e):s}'
-            print (msg)
-            return
+#            msg = f'Failed to create {outdir:s}: {str(e):s}'
+#            print (msg)
+#            return
 
-        if debug:
-            logging.debug ('')
-            logging.debug ('returned os.makedirs') 
+#        if debug:
+#            logging.debug ('')
+#            logging.debug ('returned os.makedirs') 
 
 
-        pngsubdir = ''
-        if pngflag:
-            pngsubdir = outdir + '/png'
+#        pngsubdir = ''
+#        if pngflag:
+#            pngsubdir = outdir + '/png'
 
 #
 #    make png subdir
 #
-            d1 = int ('0775', 8)
+        #    d1 = int ('0775', 8)
 
-            if debug:
-                logging.debug ('')
-                logging.debug (f'd1= {d1:d}')
+        #    if debug:
+        #        logging.debug ('')
+        #        logging.debug (f'd1= {d1:d}')
      
-            try:
-                os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
+        #    try:
+        #        os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
 
-            except Exception as e:
+        #    except Exception as e:
             
-                msg = f'Failed to create {outdir:s}: {str(e):s}'
-                print (msg)
-                return
+        #        msg = f'Failed to create {outdir:s}: {str(e):s}'
+        #        print (msg)
+        #        return
 
-            if debug:
-                logging.debug ('')
-                logging.debug ('returned os.makedirs') 
+        #    if debug:
+        #        logging.debug ('')
+        #        logging.debug ('returned os.makedirs') 
 
 #
 #    parse input json file for parameters
@@ -2247,12 +2247,19 @@ class Archive:
             logging.debug (results) 
 
         nresulttbl = int(results['nresulttbl'])
-        ngraphtbl = int(results['ngraphtbl'])
+        
+        if (nresulttbl == 0):
+            print ("There is no result table in this MOSS search.")
+            return
+
+        ngraphtbl = 0
+        if (nresulttbl > 0):
+            ngraphtbl = int(results['ngraphtbl'])
         
         if debug:
             logging.debug ('')
             logging.debug (f'nresulttbl= {nresulttbl:d}') 
-            logging.debug (f'nesulttbl= {ngraphtbl:d}') 
+            logging.debug (f'ngraphtbl= {ngraphtbl:d}') 
 
 #
 #    download result metadata tables: get rid of the last '/' from baseurl
@@ -2272,17 +2279,47 @@ class Archive:
         nmeta_total = nresulttbl + ngraphtbl  
         msg = 'Start downloading ' +  str(nmeta_total) + ' metadata tables '
         
-        if pngflag:
+        if (pngflag and ngraphtbl > 0):
             msg = msg + 'and their associated graph PNG files ' 
         msg = msg + 'you requested;'
         
         print (msg)
         print (f'please check your outdir: {outdir:s} for  progress.')
-        
+
         ndnloaded_metatbl = 0
         ndnloaded_png = 0
 
         if (nresulttbl > 0):
+
+#
+#    if 'outdirr' doesn't exist, create the directory,
+#
+#    decimal mode work for both python2.7 and python3;
+#
+#    0755 also works for python 2.7 but not python3
+#  
+#    convert octal 0775 to decimal: 493 
+#
+            d1 = int ('0775', 8)
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'd1= {d1:d}')
+     
+            try:
+                os.makedirs (outdir, mode=d1, exist_ok=True) 
+
+            except Exception as e:
+            
+                msg = f'Failed to create {outdir:s}: {str(e):s}'
+                print (msg)
+                return
+
+            if debug:
+                logging.debug ('')
+                logging.debug ('returned os.makedirs') 
+
+
 #
 # { download result metadata tables
 #
@@ -2337,8 +2374,31 @@ class Archive:
 
         if (ngraphtbl > 0):
 #
-#{  download graph metadata tables
+#{  download graph metadata tables: make png subdir
 #
+            pngsubdir = ''
+            if pngflag:
+                pngsubdir = outdir + '/png'
+
+                d1 = int ('0775', 8)
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'd1= {d1:d}')
+     
+                try:
+                    os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
+
+                except Exception as e:
+            
+                    msg = f'Failed to create {pngsubdir:s}: {str(e):s}'
+                    print (msg)
+                    return
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('returned os.makedirs: pngsubdir') 
+
 
             for l in range (ngraphtbl):
            
@@ -2439,9 +2499,12 @@ class Archive:
                                 logging.debug ('')
                                 logging.debug (\
                                     f'get pngfile exception: {str(e):s}') 
-      
-        print (f'{ndnloaded_metatbl:d} metadata tables and {ndnloaded_png:d} graph PNG files downloaded') 
-
+     
+        if (ngraphtbl == 0):
+            print (f'{ndnloaded_metatbl:d} metadata tables downloaded.')
+        elif (ngraphtbl > 0):
+            print (f'{ndnloaded_metatbl:d} metadata tables and {ndnloaded_png:d} graph PNG files downloaded.') 
+            
 #
 # } end download graph metadata tables
 #
