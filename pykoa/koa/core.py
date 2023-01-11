@@ -1538,15 +1538,24 @@ class Archive:
 
         startdate (string): a date string in the format of 'yyyy-mm-dd'
 
-        outpath (string): a full output path for the returned 'result json file'
-            which contains the information of the moving objects found including:
+        outdir (string): a output directory for the returned output files: 
+        
+        outfile (string): output result list file name (a json file),
+        
+        Output files contains the following:
+
+            --  a json formated result lists that contains the information of 
+                the moving objects found including:
             
-            input parameters,
-            numbers of moving objects found,
-            metadata,
-            URL link to the file that is the same metadata in IPAC format,
-            URL link to the PNG files showing the intersections of the KOA 
-            observation with the moving objects' trajectory.
+                input parameters,
+                numbers of moving objects found,
+                metadata,
+                URL link to the file that is the same metadata in IPAC format,
+                URL link to the PNG files showing the intersections of the KOA 
+                observation with the moving objects' trajectory.
+            
+            -- the metadata files associated the moving objects.
+
 
         Optional inputs:
 	----------------
@@ -1606,12 +1615,12 @@ class Archive:
                 object = 'pluto', \
                 startdate = '1995-01-01', \
                 enddate = '2020-07-08', \
-                outpath = './nirspec_pluto.json', \
+                outdir = './nirspec_pluto', \
+                outfile = 'nirspec_pluto.json', \
                 naifid = '999', \
                 datatype = 'both', \
                 graphoption = 1)
         """
-        
         debug = 0
         debugfname = ''
         if ('debugfile' in kwargs):
@@ -1627,7 +1636,6 @@ class Archive:
                 with open (debugfname, 'w') as fdebug:
                     pass
 
-
 #
 #    retrieve baseurl from conf class;
 #
@@ -1640,8 +1648,8 @@ class Archive:
 
         if debug:
             logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
             logging.debug ('Enter query_moving_object:')
+            logging.debug (f'baseurl= {self.baseurl:s}')
        
         instrument = ''
         if ('instrument' in kwargs): 
@@ -1659,14 +1667,22 @@ class Archive:
             print ('Failed to find required parameter: object')
             return
 
-        outpath = ''
-        if ('outpath' in kwargs): 
-            outpath = str(kwargs.get('outpath'))
+        outdir = ''
+        if ('outdir' in kwargs): 
+            outdir = str(kwargs.get('outdir'))
         
-        if (len(outpath) == 0):
-            print ('Failed to find required parameter: outpath')
+        if (len(outdir) == 0):
+            print ('Failed to find required parameter: outdir')
             return
-
+        
+        outfile = ''
+        if ('outfile' in kwargs): 
+            outfile = str(kwargs.get('outfile'))
+        
+        if (len(outfile) == 0):
+            print ('Failed to find required parameter: outfile')
+            return
+        
         startdate = ''
         if ('startdate' in kwargs): 
             startdate = str(kwargs.get('startdate'))
@@ -1691,7 +1707,8 @@ class Archive:
             logging.debug ('')
             logging.debug (f'instrument= {instrument:s}')
             logging.debug (f'object= {object:s}')
-            logging.debug (f'outpath= {outpath:s}')
+            logging.debug (f'outdir= {outdir:s}')
+            logging.debug (f'outfile= {outfile:s}')
             logging.debug (f'startdate= {startdate:s}')
             logging.debug (f'enddate= {enddate:s}')
 
@@ -1861,6 +1878,33 @@ class Archive:
                     logging.debug (f'loadCookie exception: {str(e):s}')
                 pass
 
+
+#
+#    if 'outdir' doesn't exist, create the directory,
+#
+#    decimal mode work for both python2.7 and python3;
+#    0755 also works for python 2.7 but not python3
+#    convert octal 0775 to decimal: 493
+#
+        d1 = int ('0775', 8)
+        
+        if debug:
+            logging.debug ('')
+            logging.debug (f'd1= {d1:d}')
+                                                 
+        try:
+            os.makedirs (outdir, mode=d1, exist_ok=True)
+        
+        except Exception as e:
+            print (msg)
+            return
+        
+        if debug:
+            logging.debug ('')
+            logging.debug ('returned os.makedirs')
+
+        outpath = outdir + '/' + outfile
+
 #
 #    send query in async mode and loop until done
 #
@@ -2012,13 +2056,24 @@ class Archive:
         
             if debug:
                 logging.debug ('')
-                logging.debug (f'resulturl= {resulturl:s}')
+                logging.debug (f'XXX> resulturl= {resulturl:s}')
        
             try:
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('')
+                    logging.debug ('')
+                    logging.debug (f'XXX (before)> resulturl= {resulturl:s}')
+
                 self.__get_moss_resultfile (resulturl, outpath) 
                 
                 if debug:
                     logging.debug ('')
+                    logging.debug (f'XXX (after) > resulturl= {resulturl:s}')
+                    logging.debug ('')
+                    logging.debug ('')
+                    logging.debug ('')
+
                     logging.debug ('returned __get_moss_resultfile')
              
             except Exception as e:
@@ -2030,15 +2085,40 @@ class Archive:
                 print (str(e))
                 return
 
-        msg = 'result file written to ' + outpath
+        msg = 'result metafile list written to ' + outpath
         print (msg)
+
+#
+#    download metadata files
+#
+        try:
+            if debug:
+                logging.debug ('')
+                logging.debug ('call __download_moving_object_metadata')
+             
+            #self.__download_moving_object_metadata (outpath, outdir, debug=1)
+            self.__download_moving_object_metadata (outpath, outdir)
+                
+            if debug:
+                logging.debug ('')
+                logging.debug ('returned __download_moving_object_metadata')
+             
+        except Exception as e:
+           
+            if debug:
+                logging.debug ('')
+                logging.debug (
+                    f'Exception error get_moss_resultfile: {str(e):s}')
+            print (str(e))
+            return
+
         return       
 #
 #} end Archive.query_moving_object
 #
 
     
-    def download_moving_object_metadata (self, jsonpath, outdir, **kwargs):
+    def __download_moving_object_metadata (self, jsonpath, outdir, **kwargs):
 #
 #{ Archive.download_moving_object_metadata
 #
@@ -2071,46 +2151,26 @@ class Archive:
         """
 
         debug = 0
-        debugfname = ''
-        if ('debugfile' in kwargs):
-            
+        if ('debug' in kwargs):
             debug = 1
-            debugfname = kwargs.get ('debugfile')
-
-            if (len(debugfname) > 0):
-      
-                logging.basicConfig (filename=debugfname, \
-                    level=logging.DEBUG)
-    
-                with open (debugfname, 'w') as fdebug:
-                    pass
-
+            
         if debug:
             logging.debug ('')
             logging.debug ('Enter download_moving_object_metadata')
             logging.debug (f'jsonpath= {jsonpath:s}')
             logging.debug (f'outdir= {outdir:s}')
+            logging.debug (f'self.baseurl= {self.baseurl:s}')
 
-#
-#    retrieve baseurl from conf class;
-#
-#    during dev or test, baseurl will be a keyword input
-#
-        self.baseurl = conf.server
-
-        if ('server' in kwargs):
-            self.baseurl = kwargs.get ('server')
+        baseurl = ''
+        len_baseurl = len(self.baseurl)
+        if (self.baseurl[len_baseurl-1] == '/'):
+            baseurl = self.baseurl[0:len_baseurl-1]
+        else:
+            baseurl = self.baseurl
 
         if debug:
             logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
-            logging.debug ('Enter download_moving_object_metadata:')
-            logging.debug (f'outdir= {outdir:s}')
-      
-        if (len (outdir) == 0):
-            msg = 'Required input parameter outdir is an empty string'  
-            print (msg)    
-            return 
+            logging.debug (f'baseurl= {baseurl:s}') 
 
 
         pngflag = 1 
@@ -2120,61 +2180,6 @@ class Archive:
         if debug:
             logging.debug ('')
             logging.debug (f'pngflag= {pngflag:d}')
-
-#
-#    if 'outdirr' doesn't exist, create the directory,
-#
-#    decimal mode work for both python2.7 and python3;
-#
-#    0755 also works for python 2.7 but not python3
-#  
-#    convert octal 0775 to decimal: 493 
-#
-#        d1 = int ('0775', 8)
-
-#        if debug:
-#            logging.debug ('')
-#            logging.debug (f'd1= {d1:d}')
-     
-#        try:
-#            os.makedirs (outdir, mode=d1, exist_ok=True) 
-
-#        except Exception as e:
-            
-#            msg = f'Failed to create {outdir:s}: {str(e):s}'
-#            print (msg)
-#            return
-
-#        if debug:
-#            logging.debug ('')
-#            logging.debug ('returned os.makedirs') 
-
-
-#        pngsubdir = ''
-#        if pngflag:
-#            pngsubdir = outdir + '/png'
-
-#
-#    make png subdir
-#
-        #    d1 = int ('0775', 8)
-
-        #    if debug:
-        #        logging.debug ('')
-        #        logging.debug (f'd1= {d1:d}')
-     
-        #    try:
-        #        os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
-
-        #    except Exception as e:
-            
-        #        msg = f'Failed to create {outdir:s}: {str(e):s}'
-        #        print (msg)
-        #        return
-
-        #    if debug:
-        #        logging.debug ('')
-        #        logging.debug ('returned os.makedirs') 
 
 #
 #    parse input json file for parameters
@@ -2227,8 +2232,8 @@ class Archive:
                 logging.debug ('')
                 logging.debug ('here1-2') 
 
-            return
-
+            raise Exception (msg) 
+            
         
         if debug:
             logging.debug ('')
@@ -2250,7 +2255,8 @@ class Archive:
         
         if (nresulttbl == 0):
             print ("There is no result table in this MOSS search.")
-            return
+            raise Exception (msg) 
+            
 
         ngraphtbl = 0
         if (nresulttbl > 0):
@@ -2264,17 +2270,6 @@ class Archive:
 #
 #    download result metadata tables: get rid of the last '/' from baseurl
 #
-        baseurl = ''
-        len_baseurl = len(self.baseurl)
-        if (self.baseurl[len_baseurl-1] == '/'):
-            baseurl = self.baseurl[0:len_baseurl-1]
-        else:
-            baseurl = self.baseurl
-
-        if debug:
-            logging.debug ('')
-            logging.debug (f'baseurl= {baseurl:s}') 
-
 
         nmeta_total = nresulttbl + ngraphtbl  
         msg = 'Start downloading ' +  str(nmeta_total) + ' metadata tables '
@@ -2290,35 +2285,6 @@ class Archive:
         ndnloaded_png = 0
 
         if (nresulttbl > 0):
-
-#
-#    if 'outdirr' doesn't exist, create the directory,
-#
-#    decimal mode work for both python2.7 and python3;
-#
-#    0755 also works for python 2.7 but not python3
-#  
-#    convert octal 0775 to decimal: 493 
-#
-            d1 = int ('0775', 8)
-
-            if debug:
-                logging.debug ('')
-                logging.debug (f'd1= {d1:d}')
-     
-            try:
-                os.makedirs (outdir, mode=d1, exist_ok=True) 
-
-            except Exception as e:
-            
-                msg = f'Failed to create {outdir:s}: {str(e):s}'
-                print (msg)
-                return
-
-            if debug:
-                logging.debug ('')
-                logging.debug ('returned os.makedirs') 
-
 
 #
 # { download result metadata tables
@@ -2385,7 +2351,23 @@ class Archive:
                 if debug:
                     logging.debug ('')
                     logging.debug (f'd1= {d1:d}')
-     
+    
+#
+#    a png file for each moss run have different file name (pid at the end)
+#    so need to have an empty png subdirectory for each run.
+#
+                isExist = os.path.exists (pngsubdir)
+            
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'pngsubdir isExist=  {isExist}')
+           
+                if (isExist):
+                    for f in os.listdir (pngsubdir):
+                        os.remove (os.path.join (pngsubdir, f))
+#
+#    create pngsubdir if the subdir doesn't exist
+#
                 try:
                     os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
 
@@ -2393,7 +2375,8 @@ class Archive:
             
                     msg = f'Failed to create {pngsubdir:s}: {str(e):s}'
                     print (msg)
-                    return
+                    raise Exception (msg) 
+            
 
                 if debug:
                     logging.debug ('')
@@ -2499,6 +2482,9 @@ class Archive:
                                 logging.debug ('')
                                 logging.debug (\
                                     f'get pngfile exception: {str(e):s}') 
+                            msg = f'get pngfile exception: {str(e):s}' 
+                            raise Exception (msg) 
+            
      
         if (ngraphtbl == 0):
             print (f'{ndnloaded_metatbl:d} metadata tables downloaded.')
@@ -2528,6 +2514,13 @@ class Archive:
 
         if ('debug' in kwargs):
             debug = int(kwargs.get ('debug'))
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('Enter __get_moss_resultfile:')
+            logging.debug (f'XXX> resulturl= {resulturl:s}')
+            logging.debug (f'outpath= {outpath:s}')
+
 
 #
 #   send resulturl to retrieve result table
