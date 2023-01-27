@@ -55,7 +55,6 @@ import getpass
 import logging
 import time
 import json
-import lxml
 #import ijson
 import xmltodict 
 import tempfile
@@ -1538,24 +1537,15 @@ class Archive:
 
         startdate (string): a date string in the format of 'yyyy-mm-dd'
 
-        outdir (string): a output directory for the returned output files: 
-        
-        outfile (string): output result list file name (a json file),
-        
-        Output files contains the following:
-
-            --  a json formated result lists that contains the information of 
-                the moving objects found including:
+        outpath (string): a full output path for the returned 'result json file'
+            which contains the information of the moving objects found including:
             
-                input parameters,
-                numbers of moving objects found,
-                metadata,
-                URL link to the file that is the same metadata in IPAC format,
-                URL link to the PNG files showing the intersections of the KOA 
-                observation with the moving objects' trajectory.
-            
-            -- the metadata files associated the moving objects.
-
+            input parameters,
+            numbers of moving objects found,
+            metadata,
+            URL link to the file that is the same metadata in IPAC format,
+            URL link to the PNG files showing the intersections of the KOA 
+            observation with the moving objects' trajectory.
 
         Optional inputs:
 	----------------
@@ -1563,8 +1553,7 @@ class Archive:
             if missing the default is the current date,
             
         naifid (integer): JPL's NAIF object ID number to more precisely 
-            identify the moving object; this is needed when the object name
-            such as 'pluto' which results in multiple targets.
+            identify the moving object.
         
         cookiepath (string): a cookie file path obtained via login method, only
                              required for querying the proprietary KOA data.
@@ -1576,7 +1565,7 @@ class Archive:
             png files of moving object tracjectories; default is 1,
 
         orbitalinput (int): 0 or 1 indicates whether the precise orbital 
-            input parameters are provided; default is 0,
+            input parameters are provided,
        
         The orbital input contains the following parameters:
     
@@ -1584,7 +1573,7 @@ class Archive:
 	    ec (eccentricity),
 	    om (deg): longitude of ascending node, 
 	    w (deg) : argument of perihelion,
-	    inc (deg): inclination,
+	    in (deg): inclination,
 	  
             qr (au) (perihelion distance -- for Comet),
 	    tp (JD) (perihelion Julian date -- for Comet),
@@ -1602,7 +1591,7 @@ class Archive:
 	    -EC:    eccentricity,
 	    -OM:    longitude of ascending node,
             -W:     argument of perihelion,	
-	    -INC:    inclination,
+	    -IN:    inclination,
 	    -QR:    perihelion distance,
 	    -TP:    perihelion Julian date,
 
@@ -1615,12 +1604,12 @@ class Archive:
                 object = 'pluto', \
                 startdate = '1995-01-01', \
                 enddate = '2020-07-08', \
-                outdir = './nirspec_pluto', \
-                outfile = 'nirspec_pluto.json', \
+                outpath = './nirspec_pluto.json', \
                 naifid = '999', \
                 datatype = 'both', \
                 graphoption = 1)
         """
+        
         debug = 0
         debugfname = ''
         if ('debugfile' in kwargs):
@@ -1636,6 +1625,7 @@ class Archive:
                 with open (debugfname, 'w') as fdebug:
                     pass
 
+
 #
 #    retrieve baseurl from conf class;
 #
@@ -1646,10 +1636,10 @@ class Archive:
         if ('server' in kwargs):
             self.baseurl = kwargs.get ('server')
 
-        if debug:
+        if self.debug:
             logging.debug ('')
-            logging.debug ('Enter query_moving_object:')
             logging.debug (f'baseurl= {self.baseurl:s}')
+            logging.debug ('Enter query_moving_object:')
        
         instrument = ''
         if ('instrument' in kwargs): 
@@ -1667,22 +1657,14 @@ class Archive:
             print ('Failed to find required parameter: object')
             return
 
-        outdir = ''
-        if ('outdir' in kwargs): 
-            outdir = str(kwargs.get('outdir'))
+        outpath = ''
+        if ('outpath' in kwargs): 
+            outpath = str(kwargs.get('outpath'))
         
-        if (len(outdir) == 0):
-            print ('Failed to find required parameter: outdir')
+        if (len(outpath) == 0):
+            print ('Failed to find required parameter: outpath')
             return
-        
-        outfile = ''
-        if ('outfile' in kwargs): 
-            outfile = str(kwargs.get('outfile'))
-        
-        if (len(outfile) == 0):
-            print ('Failed to find required parameter: outfile')
-            return
-        
+
         startdate = ''
         if ('startdate' in kwargs): 
             startdate = str(kwargs.get('startdate'))
@@ -1707,8 +1689,7 @@ class Archive:
             logging.debug ('')
             logging.debug (f'instrument= {instrument:s}')
             logging.debug (f'object= {object:s}')
-            logging.debug (f'outdir= {outdir:s}')
-            logging.debug (f'outfile= {outfile:s}')
+            logging.debug (f'outpath= {outpath:s}')
             logging.debug (f'startdate= {startdate:s}')
             logging.debug (f'enddate= {enddate:s}')
 
@@ -1720,7 +1701,7 @@ class Archive:
         if ('naifid' in kwargs): 
             naifid = str (kwargs.get('naifid'))
 
-        datatype = 'both'
+        datatype = ''
         if ('datatype' in kwargs): 
             datatype = str (kwargs.get('datatype'))
 
@@ -1753,31 +1734,31 @@ class Archive:
         if (orbitalinput == 1):
 
             if ('epoch' in kwargs): 
-                epoch = kwargs.get('epoch')
+                epoch = int (kwargs.get('epoch'))
 
-            if ('ec' in kwargs): 
-                ecstr = kwargs.get('ec')
+            if ('ecstr' in kwargs): 
+                ecstr = int (kwargs.get('ecstr'))
 
-            if ('om' in kwargs): 
-                omstr = kwargs.get('om')
+            if ('omstr' in kwargs): 
+                omstr = int (kwargs.get('omstr'))
 
-            if ('w' in kwargs): 
-                wstr = kwargs.get('w')
+            if ('wstr' in kwargs): 
+                wstr = int (kwargs.get('wstr'))
 
-            if ('inc' in kwargs): 
-                instr = kwargs.get('inc')
+            if ('instr' in kwargs): 
+                instr = int (kwargs.get('instr'))
 
-            if ('qr' in kwargs): 
-                qrstr = kwargs.get('qr')
+            if ('qrstr' in kwargs): 
+                qrstr = int (kwargs.get('qrstr'))
 
-            if ('tp' in kwargs): 
-                tpstr = kwargs.get('tp')
+            if ('tpstr' in kwargs): 
+                tpstr = int (kwargs.get('tpstr'))
 
-            if ('a' in kwargs): 
-                astr = kwargs.get('a')
+            if ('astr' in kwargs): 
+                astr = int (kwargs.get('astr'))
 
-            if ('m0' in kwargs): 
-                m0str = kwargs.get('m0')
+            if ('m0str' in kwargs): 
+                m0str = int (kwargs.get('m0str'))
 
             if debug:
                 logging.debug ('')
@@ -1799,13 +1780,10 @@ class Archive:
         param['target'] = object
         param['starttime'] = startdate
         param['endtime'] = enddate
-
+        
         if (len(naifid) > 0):
             param['naifid'] = naifid
-
-        if ((instrument.lower() == 'hires') and (datatype.lower() == 'both')):
-            datatype = 'spec'
-
+        
         if (len(datatype) > 0):
             param['datatype'] = datatype
         
@@ -1837,13 +1815,15 @@ class Archive:
             logging.debug ('')
             logging.debug (f'workspace= {workspace:s}')
 
+        param ['debug'] = '/home/mihseh/MossAPI/src/pykoaTest/nirc2_pluto.debug'
+        param ['workspace'] = workspace
+
         data = urllib.parse.urlencode (param)
 
         url = moss_url + data 
 
         if debug:
             logging.debug ('')
-            logging.debug (f'moss full url sent to server:')
             logging.debug (f'url= {url:s}')
 
 #
@@ -1878,33 +1858,6 @@ class Archive:
                     logging.debug (f'loadCookie exception: {str(e):s}')
                 pass
 
-
-#
-#    if 'outdir' doesn't exist, create the directory,
-#
-#    decimal mode work for both python2.7 and python3;
-#    0755 also works for python 2.7 but not python3
-#    convert octal 0775 to decimal: 493
-#
-        d1 = int ('0775', 8)
-        
-        if debug:
-            logging.debug ('')
-            logging.debug (f'd1= {d1:d}')
-                                                 
-        try:
-            os.makedirs (outdir, mode=d1, exist_ok=True)
-        
-        except Exception as e:
-            print (msg)
-            return
-        
-        if debug:
-            logging.debug ('')
-            logging.debug ('returned os.makedirs')
-
-        outpath = outdir + '/' + outfile
-
 #
 #    send query in async mode and loop until done
 #
@@ -1938,6 +1891,17 @@ class Archive:
                 logging.debug ('')
                 logging.debug (f'exception: e= {str(e):s}')
            
+        if debug:
+            logging.debug ('')
+            logging.debug (f'status_code= {response.status_code:d}')
+            logging.debug ('response: ')
+            logging.debug (response)
+            logging.debug (response.text)
+            logging.debug ('response.headers: ')
+            logging.debug (response.headers)
+            logging.debug ('')
+            logging.debug (f'status_code= {response.status_code:d}')
+
 
 #
 # {  if response is a json structure: parse for status;
@@ -1990,10 +1954,7 @@ class Archive:
 
 
         else:
-            print ('response:')
-            print (response)
-            if (response is not None):
-                print (response.text)
+            print (response.text)
             return
 
         if debug:
@@ -2056,24 +2017,13 @@ class Archive:
         
             if debug:
                 logging.debug ('')
-                logging.debug (f'XXX> resulturl= {resulturl:s}')
+                logging.debug (f'resulturl= {resulturl:s}')
        
             try:
-                if debug:
-                    logging.debug ('')
-                    logging.debug ('')
-                    logging.debug ('')
-                    logging.debug (f'XXX (before)> resulturl= {resulturl:s}')
-
                 self.__get_moss_resultfile (resulturl, outpath) 
                 
                 if debug:
                     logging.debug ('')
-                    logging.debug (f'XXX (after) > resulturl= {resulturl:s}')
-                    logging.debug ('')
-                    logging.debug ('')
-                    logging.debug ('')
-
                     logging.debug ('returned __get_moss_resultfile')
              
             except Exception as e:
@@ -2085,40 +2035,15 @@ class Archive:
                 print (str(e))
                 return
 
-        msg = 'result metafile list written to ' + outpath
+        msg = 'result file written to ' + outpath
         print (msg)
-
-#
-#    download metadata files
-#
-        try:
-            if debug:
-                logging.debug ('')
-                logging.debug ('call __download_moving_object_metadata')
-             
-            #self.__download_moving_object_metadata (outpath, outdir, debug=1)
-            self.__download_moving_object_metadata (outpath, outdir)
-                
-            if debug:
-                logging.debug ('')
-                logging.debug ('returned __download_moving_object_metadata')
-             
-        except Exception as e:
-           
-            if debug:
-                logging.debug ('')
-                logging.debug (
-                    f'Exception error get_moss_resultfile: {str(e):s}')
-            print (str(e))
-            return
-
         return       
 #
 #} end Archive.query_moving_object
 #
 
     
-    def __download_moving_object_metadata (self, jsonpath, outdir, **kwargs):
+    def download_moving_object_metadata (self, jsonpath, outdir, **kwargs):
 #
 #{ Archive.download_moving_object_metadata
 #
@@ -2146,31 +2071,51 @@ class Archive:
         
         Optional input:
 	----------------
-        pngflag (0 or 1): 1 indicating that PNG files will be downloaded; 
-                          default is 1.
+        pngflag (0 or 1): default is 1 indicating that PNG files will be 
+                          downloaded; 0 to supress downloading PNG files.
         """
 
         debug = 0
-        if ('debug' in kwargs):
-            debug = 1
+        debugfname = ''
+        if ('debugfile' in kwargs):
             
+            debug = 1
+            debugfname = kwargs.get ('debugfile')
+
+            if (len(debugfname) > 0):
+      
+                logging.basicConfig (filename=debugfname, \
+                    level=logging.DEBUG)
+    
+                with open (debugfname, 'w') as fdebug:
+                    pass
+
         if debug:
             logging.debug ('')
             logging.debug ('Enter download_moving_object_metadata')
             logging.debug (f'jsonpath= {jsonpath:s}')
             logging.debug (f'outdir= {outdir:s}')
-            logging.debug (f'self.baseurl= {self.baseurl:s}')
 
-        baseurl = ''
-        len_baseurl = len(self.baseurl)
-        if (self.baseurl[len_baseurl-1] == '/'):
-            baseurl = self.baseurl[0:len_baseurl-1]
-        else:
-            baseurl = self.baseurl
+#
+#    retrieve baseurl from conf class;
+#
+#    during dev or test, baseurl will be a keyword input
+#
+        self.baseurl = conf.server
+
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
 
         if debug:
             logging.debug ('')
-            logging.debug (f'baseurl= {baseurl:s}') 
+            logging.debug (f'baseurl= {self.baseurl:s}')
+            logging.debug ('Enter download_moving_object_metadata:')
+            logging.debug (f'outdir= {outdir:s}')
+      
+        if (len (outdir) == 0):
+            msg = 'Required input parameter outdir is an empty string'  
+            print (msg)    
+            return 
 
 
         pngflag = 1 
@@ -2180,6 +2125,61 @@ class Archive:
         if debug:
             logging.debug ('')
             logging.debug (f'pngflag= {pngflag:d}')
+
+#
+#    if 'outdirr' doesn't exist, create the directory,
+#
+#    decimal mode work for both python2.7 and python3;
+#
+#    0755 also works for python 2.7 but not python3
+#  
+#    convert octal 0775 to decimal: 493 
+#
+        d1 = int ('0775', 8)
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'd1= {d1:d}')
+     
+        try:
+            os.makedirs (outdir, mode=d1, exist_ok=True) 
+
+        except Exception as e:
+            
+            msg = f'Failed to create {outdir:s}: {str(e):s}'
+            print (msg)
+            return
+
+        if debug:
+            logging.debug ('')
+            logging.debug ('returned os.makedirs') 
+
+
+        pngsubdir = ''
+        if pngflag:
+            pngsubdir = outdir + '/png'
+
+#
+#    make png subdir
+#
+            d1 = int ('0775', 8)
+
+            if debug:
+                logging.debug ('')
+                logging.debug (f'd1= {d1:d}')
+     
+            try:
+                os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
+
+            except Exception as e:
+            
+                msg = f'Failed to create {outdir:s}: {str(e):s}'
+                print (msg)
+                return
+
+            if debug:
+                logging.debug ('')
+                logging.debug ('returned os.makedirs') 
 
 #
 #    parse input json file for parameters
@@ -2232,8 +2232,8 @@ class Archive:
                 logging.debug ('')
                 logging.debug ('here1-2') 
 
-            raise Exception (msg) 
-            
+            return
+
         
         if debug:
             logging.debug ('')
@@ -2252,40 +2252,42 @@ class Archive:
             logging.debug (results) 
 
         nresulttbl = int(results['nresulttbl'])
-        
-        if (nresulttbl == 0):
-            print ("There is no result table in this MOSS search.")
-            raise Exception (msg) 
-            
-
-        ngraphtbl = 0
-        if (nresulttbl > 0):
-            ngraphtbl = int(results['ngraphtbl'])
+        ngraphtbl = int(results['ngraphtbl'])
         
         if debug:
             logging.debug ('')
             logging.debug (f'nresulttbl= {nresulttbl:d}') 
-            logging.debug (f'ngraphtbl= {ngraphtbl:d}') 
+            logging.debug (f'nesulttbl= {ngraphtbl:d}') 
 
 #
 #    download result metadata tables: get rid of the last '/' from baseurl
 #
+        baseurl = ''
+        len_baseurl = len(self.baseurl)
+        if (self.baseurl[len_baseurl-1] == '/'):
+            baseurl = self.baseurl[0:len_baseurl-1]
+        else:
+            baseurl = self.baseurl
+
+        if debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {baseurl:s}') 
+
 
         nmeta_total = nresulttbl + ngraphtbl  
         msg = 'Start downloading ' +  str(nmeta_total) + ' metadata tables '
         
-        if (pngflag and ngraphtbl > 0):
+        if pngflag:
             msg = msg + 'and their associated graph PNG files ' 
         msg = msg + 'you requested;'
         
         print (msg)
         print (f'please check your outdir: {outdir:s} for  progress.')
-
+        
         ndnloaded_metatbl = 0
         ndnloaded_png = 0
 
         if (nresulttbl > 0):
-
 #
 # { download result metadata tables
 #
@@ -2340,48 +2342,8 @@ class Archive:
 
         if (ngraphtbl > 0):
 #
-#{  download graph metadata tables: make png subdir
+#{  download graph metadata tables
 #
-            pngsubdir = ''
-            if pngflag:
-                pngsubdir = outdir + '/png'
-
-                d1 = int ('0775', 8)
-
-                if debug:
-                    logging.debug ('')
-                    logging.debug (f'd1= {d1:d}')
-    
-#
-#    a png file for each moss run have different file name (pid at the end)
-#    so need to have an empty png subdirectory for each run.
-#
-                isExist = os.path.exists (pngsubdir)
-            
-                if debug:
-                    logging.debug ('')
-                    logging.debug (f'pngsubdir isExist=  {isExist}')
-           
-                if (isExist):
-                    for f in os.listdir (pngsubdir):
-                        os.remove (os.path.join (pngsubdir, f))
-#
-#    create pngsubdir if the subdir doesn't exist
-#
-                try:
-                    os.makedirs (pngsubdir, mode=d1, exist_ok=True) 
-
-                except Exception as e:
-            
-                    msg = f'Failed to create {pngsubdir:s}: {str(e):s}'
-                    print (msg)
-                    raise Exception (msg) 
-            
-
-                if debug:
-                    logging.debug ('')
-                    logging.debug ('returned os.makedirs: pngsubdir') 
-
 
             for l in range (ngraphtbl):
            
@@ -2482,15 +2444,9 @@ class Archive:
                                 logging.debug ('')
                                 logging.debug (\
                                     f'get pngfile exception: {str(e):s}') 
-                            msg = f'get pngfile exception: {str(e):s}' 
-                            raise Exception (msg) 
-            
-     
-        if (ngraphtbl == 0):
-            print (f'{ndnloaded_metatbl:d} metadata tables downloaded.')
-        elif (ngraphtbl > 0):
-            print (f'{ndnloaded_metatbl:d} metadata tables and {ndnloaded_png:d} graph PNG files downloaded.') 
-            
+      
+        print (f'{ndnloaded_metatbl:d} metadata tables and {ndnloaded_png:d} graph PNG files downloaded') 
+
 #
 # } end download graph metadata tables
 #
@@ -2514,13 +2470,6 @@ class Archive:
 
         if ('debug' in kwargs):
             debug = int(kwargs.get ('debug'))
-
-        if debug:
-            logging.debug ('')
-            logging.debug ('Enter __get_moss_resultfile:')
-            logging.debug (f'XXX> resulturl= {resulturl:s}')
-            logging.debug (f'outpath= {outpath:s}')
-
 
 #
 #   send resulturl to retrieve result table
@@ -2668,6 +2617,7 @@ class Archive:
 #
 
 
+
     def print_data (self):
 #
 #{ Archive.print_date
@@ -2733,30 +2683,23 @@ class Archive:
         end_row (integer): default is end_row = nrows - 1 where nrows is the 
                            number of rows in the metadata file;
 
-        lev0file (integer): 1/0; 
-            1: download level0 files (i.e. raw data) in 'lev0' directory;
-            0: do not download level0 files.
-            default is 1.
-        
-        calibfile (integer): 1/0;
-            1: download calibration files;
-            0: do not download calibration files.
+        lev0file (integer): whether to download the level0 (i.e. raw data) 
+            file(s) (0: do not download; 1: download);
             default is 0.
-         
-            Note: The calibration files are saved in the directory determined 
-            by paramter 'calibdir' -- either in the 'calib' sub-directory, or
-            in the same directory as the raw data files.
+        
+        calibfile (integer): whether to download the associated calibration 
+            files (0: do not download; 1: download);
+            default is 0.
+        
+        lev1file (integer): whether to download the associated level 1 
+            file(s) (0: do not download; 1: download);
+            default is 0.
+    
+        flat_subdir (1 or 0): the default for this parameter is 0 indicate 
+            lev0, lev1, and calib files are downloaed to their separate
+            sub-directories; if set to 1 meaning all three types of files 
+            will be downloaded to the same download directories.
 
-        lev1file (integer): 1/0;
-            1: download level1 files in 'lev1' directory;
-            0: do not download level1 files.
-            default is 0.
-        
-        calibdir (integer): 1/0; 
-            1: put calibration files in their own directory named 'calib'; 
-            0: put the calibration files in the 'lev0' directory with other 
-                raw, science files.
-            default is 1.
         """
        
         debug = 0
@@ -2936,7 +2879,7 @@ class Archive:
             return
             #sys.exit()
         
-        lev0file = 1 
+        lev0file = 0 
         if ('lev0file' in kwargs): 
             lev0file = kwargs.get('lev0file')
          
@@ -2948,25 +2891,25 @@ class Archive:
         if ('lev1file' in kwargs): 
             lev1file = kwargs.get('lev1file')
          
-        calibdir = 1 
-        if ('calibdir' in kwargs): 
-            calibdir = kwargs.get('calibdir')
+        flat_subdir = 0 
+        if ('flat_subdir' in kwargs): 
+            flat_subdir = kwargs.get('flat_subdir')
          
         if debug:
             logging.debug ('')
             logging.debug (f'lev0file= {lev0file:d}')
             logging.debug (f'calibfile= {calibfile:d}')
             logging.debug (f'lev1file= {lev1file:d}')
-            logging.debug (f'calibdir= {calibdir:d}')
+            logging.debug (f'flat_subdir= {flat_subdir:d}')
 
-        """
+
         if ((lev0file == 0) and \
             (lev1file == 0) and \
             (calibfile == 0)):
             
             print ('Please choose which types of data you wish to download: lev0file, lev1file, and calibfile, more than one choice is allowed.')
             return
-        """
+
 
         srow = 0;
         erow = len_tbl - 1
@@ -3014,7 +2957,7 @@ class Archive:
 #    lev0 subdir 
 #
         outdir_lev0 = outdir
-        if (lev0file == 1):
+        if ((lev0file == 1) and (flat_subdir == 0)):
             outdir_lev0 = outdir + '/lev0'
             
         try:
@@ -3035,7 +2978,7 @@ class Archive:
 #    lev1 subdir 
 #
         outdir_lev1 = outdir
-        if (lev1file == 1):
+        if ((lev1file == 1) and (flat_subdir == 0)):
             outdir_lev1 = outdir + '/lev1'
             
         try:
@@ -3055,16 +2998,9 @@ class Archive:
 #    calib subdir 
 #
         outdir_calib = outdir
-        if (calibfile == 1):
+        if ((calibfile == 1) and (flat_subdir == 0)):
+            outdir_calib = outdir + '/calibfiles'
             
-            if (lev0file == 0):
-                outdir_calib = outdir + '/calib'
-            else:
-                if (calibdir == 1):
-                    outdir_calib = outdir + '/calib'
-                else:
-                    outdir_calib = outdir + '/lev0'
-
         try:
             os.makedirs (outdir_calib, mode=d1, exist_ok=True) 
 
@@ -3112,8 +3048,9 @@ class Archive:
       
         nfile = erow - srow + 1   
         
-        print (f'Start downloading {nfile:d} koaid data you requested;')
-        print (f'please check your outdir: {outdir:s} for  progress ....')
+        #print (f'Start downloading {nfile:d} FITS data you requested;')
+        print (f'Start downloading data you requested;')
+        print (f'please check your outdir: {outdir:s} for  progress.')
  
         for l in range (srow, erow+1):
         #
@@ -3157,7 +3094,7 @@ class Archive:
             ind = instrument.find ('LRIS')
             if (ind >= 0):
                 instrument = 'LRIS'
- 
+  
             ind = -1
             ind = instrument.find ('NIRS')
             if (ind >= 0):
@@ -3172,6 +3109,7 @@ class Archive:
             #
             #   get lev0 files
             #
+            errmsg = ''
             if (lev0file == 1):
             
                 url = self.getkoa_url + 'filehand=' + filehand
@@ -3201,8 +3139,14 @@ class Archive:
                             logging.debug (f'self.msg= {msg:s}')
             
                     except Exception as e:
-                        print (f'File [{koaid:s}] download error: {str(e):s}')
+                        
+                        errmsg = str(e)
 
+                        if debug:
+                            logging.debug ('')
+                            logging.debug (f'errmsg= {errmsg:s}')
+            
+                        print (f'File [{koaid:s}] failed to download: {str(e):s}')
                 if debug:
                     logging.debug ('')
                     logging.debug (f'ndnloaded_lev0= {ndnloaded_lev0:d}')
@@ -3358,22 +3302,12 @@ class Archive:
                             logging.debug ('')
                             logging.debug ('list exist: downloading lev1files')
 
-                    
-                        #if ((instrument.lower() != "hires") or \
-                        #    (instrument.lower() != "nirspec")):
-                        #    print ('')
-                        #    print ( \
-                        #        f'Downloading [{koaid:s}] level 1 files ....')
-                        
-                        #print ('')
-                        #print (f'Downloading [{koaid:s}] level 1 files ....')
-                        
                         try:
                             nlev1 = self.__download_lev1files (jsonData, \
-                                cookiejar, outdir_lev1)
+                                cookiejar, outdir, flat_subdir)
                         
                             #nlev1 = self.__download_lev1files (jsonData, \
-                            #    cookiejar, outdir_lev1, debug=1)
+                            #    cookiejar, outdir, flat_subdir, debug=1)
                     
                             if debug:
                                 logging.debug ('')
@@ -3387,14 +3321,14 @@ class Archive:
                                 logging.debug ( \
                                     f'ndnloaded_lev1= {ndnloaded_lev1:d}')
                            
-                            msg = str(nlev1) + ' level1 files downloaded ' \
+                            msg = str(nlev1) + ' level1 files downloadded ' \
                                 + 'for koaid: [' + koaid + ']'
 
                             if debug:
                                 logging.debug ('')
                                 logging.debug (f'msg= {msg:s}')
                            
-                            #print (f'{msg:s}')
+                            print (f'{msg:s}')
          
                             if debug:
                                 logging.debug ('')
@@ -3552,16 +3486,7 @@ class Archive:
                     if debug:
                         logging.debug ('')
                         logging.debug ('list exist: downloading calibfiles')
-	   
-                    #if ((instrument.lower() != "hires") or \
-                    #    (instrument.lower() != "nirspec")):
-                    #    print ('')
-                    #    print ( \
-                    #        f'Downloading [{koaid:s}] calibration files ....')
-                    
-                    #print ('')
-                    #print (f'Downloading [{koaid:s}] calibration files ....')
-                        
+	    
                     try:
                         #ncalibs = self.__download_calibfiles ( \
                         #    caliblist, cookiejar, outdir_calib)
@@ -3574,10 +3499,6 @@ class Archive:
                             logging.debug ('')
                             logging.debug ('returned __download_calibfiles')
                             logging.debug (f'{ncalibs:d} downloaded')
-
-                        msg = str(ncalibs) + ' calibration files downloaded ' \
-                            + 'for koaid: [' + koaid + ']'
-                        #print (msg)
 
                     except Exception as e:
                 
@@ -3609,10 +3530,7 @@ class Archive:
             logging.debug (f'{ncaliblist:d} calibration list downloaded.')
             logging.debug (\
                 f'{ndnloaded_calib:d} calibration files downloaded.')
-        #
-        #    print out total count of downloaded files
-        #
-        print ('')
+        
         if (lev0file == 1):
             print (f'A total of {ndnloaded_lev0:d} new lev0 FITS files downloaded.')
  
@@ -3636,7 +3554,7 @@ class Archive:
 #
     
 
-    def __download_lev1files (self, jsonData, cookiejar, outdir_lev1, \
+    def __download_lev1files (self, jsonData, cookiejar, outdir, flat_subdir, \
         **kwargs):
 #
 #{ Archive.__download_lev1files
@@ -3647,9 +3565,14 @@ class Archive:
             debugstr = kwargs.get ('debug')
             debug = int(debugstr)
    
+        outdir_lev1 = outdir
+        if (flat_subdir == 0):
+            outdir_lev1 = outdir + '/lev1'
+
         if debug:
             logging.debug ('')
             logging.debug (f'Enter __download_lev1files:')
+            logging.debug (f'outdir= {outdir:s}')
             logging.debug (f'outdir_lev1= {outdir_lev1:s}')
 
 #
@@ -3896,6 +3819,8 @@ class Archive:
 #
 #} end  Archive.__download_lev1files
 #
+
+
 
 
     def __download_calibfiles (self, listpath, cookiejar, outdir_calib, \
@@ -6257,9 +6182,7 @@ class KoaJob:
 #    parse returned status xml structure for parameters
 #
         try:
-            soup = bs.BeautifulSoup (self.statusstruct, 'xml')
-       
-            #soup = bs.BeautifulSoup (self.statusstruct, 'lxml')
+            soup = bs.BeautifulSoup (self.statusstruct, 'lxml')
        
         except Exception as e:
 
