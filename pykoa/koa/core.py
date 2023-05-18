@@ -183,26 +183,6 @@ class Archive:
             logging.debug ('')
             logging.debug (f'cgipgm= {self.cgipgm:s}')
 
-#
-#    urls for nph-tap.py, nph-koaLogin, nph-makeQyery, 
-#    nph-getKoa, and nph-getCaliblist
-#
-        self.tap_url = self.baseurl + self.cgipgm
-        
-        self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
-        self.makequery_url = self.baseurl + 'cgi-bin/KoaAPI/nph-makeQuery?'
-        self.caliblist_url = self.baseurl+ 'cgi-bin/KoaAPI/nph-getCaliblist?'
-        self.lev1list_url = self.baseurl + 'cgi-bin/KoaAPI/nph-getL1list?'
-        self.getkoa_url = self.baseurl + 'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'login_url= [{self.login_url:s}]')
-            logging.debug (f'tap_url= [{self.tap_url:s}]')
-            logging.debug (f'makequery_url= [{self.makequery_url:s}]')
-            logging.debug (f'self.getkoa_url= {self.getkoa_url:s}')
-            logging.debug (f'self.caliblist_url= {self.caliblist_url:s}')
-      
         return
 #
 #} end Archive.init
@@ -259,33 +239,40 @@ class Archive:
                 logging.debug ('')
                 logging.debug ('debug turned on')
         
-#
-#    if server keyword represent during dev/test, modify baseurl
-#
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'conf.server= {conf.server:s}')
-
-        self.baseurl = conf.server
-
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'baseurl (from conf)= {self.baseurl:s}')
-        
-        if ('server' in kwargs):
-            self.baseurl = kwargs.get ('server')
-        
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
-        
-
-        
         if self.debug:
             logging.debug ('')
             logging.debug ('')
             logging.debug ('Enter login:')
             logging.debug (f'cookiepath= [{cookiepath:s}]')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+#
+#    if server keyword represent during dev/test, modify baseurl
+#
+        #self.baseurl = conf.server
+
+        #if self.debug:
+        #    logging.debug ('')
+        #    logging.debug (f'baseurl (from conf)= {self.baseurl:s}')
+        
+        if ('server' in kwargs):
+            self.baseurl = kwargs.get ('server')
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'baseurl= {self.baseurl:s}')
+
+        self.tap_url = self.baseurl + self.cgipgm
+        
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'tap_url= [{self.tap_url:s}]')
+       
+        self.loginurl = self.baseurl + 'cgi-bin/pykoaAPI/nph-koaLogin.py?'
+
+        if self.debug:
+            logging.debug ('')
+            logging.debug (f'tap_url= [{self.tap_url:s}]')
+            logging.debug (f'loginurl= [{self.loginurl:s}]')
 
         if (len(cookiepath) == 0):
             print ('A cookiepath is required if you wish to login to KOA')
@@ -318,19 +305,22 @@ class Archive:
         password = urllib.parse.quote (password)
 
 
-        self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
+        #self.login_url = self.baseurl + 'cgi-bin/KoaAPI/nph-koaLogin?'
         
-        if self.debug:
-            logging.debug ('')
-            logging.debug (f'login_url= [{self.login_url:s}]')
+        #if self.debug:
+        #    logging.debug ('')
+        #    logging.debug (f'login_url= [{self.login_url:s}]')
 
         param = dict()
         param['userid'] = userid
         param['password'] = password
+        #param['debug'] = 1
+    
     
         data_encoded = urllib.parse.urlencode (param)
     
-        url = self.login_url + data_encoded
+        #url = self.login_url + data_encoded
+        url = self.loginurl + data_encoded
 
         if self.debug:
             logging.debug ('')
@@ -376,8 +366,16 @@ class Archive:
             logging.debug ('')
             logging.debug (f'contenttype= {contenttype:s}')
 
-        jsondata = json.loads (response.text);
+        jsondata = None
+        try:
+            jsondata = json.loads (response.text);
    
+        except Exception as e:
+
+            msg = 'Failed to load response to json: ' + str(e)
+            print (msg)
+            return
+
         for key,val in jsondata.items():
                 
             if (key == 'status'):
@@ -546,6 +544,7 @@ class Archive:
         param = dict()
         param['instrument'] = self.instrument
         param['datetime'] = self.datetime
+        #param['debug'] = 1
        
         if debug:
             logging.debug ('')
@@ -1072,10 +1071,10 @@ class Archive:
 
         if debug:
             logging.debug ('')
+            logging.debug ('Enter query_criteria')
             logging.debug (f'baseurl= {self.baseurl:s}')
             logging.debug (f'cgipgm= {self.cgipgm:s}')
             logging.debug ('')
-            logging.debug ('Enter query_criteria')
         
 #
 #    send url to server to construct the select statement
@@ -1135,9 +1134,10 @@ class Archive:
 #    nph-getKoa, and nph-getCaliblist
 #
         self.tap_url = self.baseurl + self.cgipgm
-        
-        self.makequery_url = self.baseurl + 'cgi-bin/KoaAPI/nph-makeQuery?'
-
+       
+        self.makequery_url = self.baseurl + \
+            'cgi-bin/pykoaAPI/nph-koaMakequery.py?'
+    
         if debug:
             logging.debug ('')
             logging.debug (f'tap_url= [{self.tap_url:s}]')
@@ -1183,71 +1183,46 @@ class Archive:
                 logging.debug ('')
                 logging.debug (f'cookiepath= {self.cookiepath:s}')
        
-            if debug:
+            try:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec, \
+                    cookiefile=self.cookiepath)
                 
-                try:
-                    self.tap = KoaTap (self.tap_url, \
-                        format=self.format, \
-                        maxrec=self.maxrec, \
-                        cookiefile=self.cookiepath, \
-	                debug=1)
+                #self.tap = KoaTap (self.tap_url, \
+                #    format=self.format, \
+                #    maxrec=self.maxrec, \
+                #    cookiefile=self.cookiepath, \
+	        #    debug=1)
                 
-                except Exception as e:
+            except Exception as e:
             
-                    if debug:
-                        logging.debug ('')
-                        logging.debug (f'Error: {str(e):s}')
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'Error: {str(e):s}')
                     
-                    print (str(e))
-                    return 
+                print (str(e))
+                return 
 
-            else:
-                try:
-                    self.tap = KoaTap (self.tap_url, \
-                        format=self.format, \
-                        maxrec=self.maxrec, \
-                        cookiefile=self.cookiepath)
-                
-                except Exception as e:
-            
-                    if debug:
-                        logging.debug ('')
-                        logging.debug (f'Error: {str(e):s}')
-                    
-                    print (str(e))
-                    return 
-        
         else: 
-            if debug:
-                try:
-                    self.tap = KoaTap (self.tap_url, \
-                        format=self.format, \
-                        maxrec=self.maxrec, \
-	                debug=1)
+            try:
+                self.tap = KoaTap (self.tap_url, \
+                    format=self.format, \
+                    maxrec=self.maxrec)
+        
+                #self.tap = KoaTap (self.tap_url, \
+                #    format=self.format, \
+                #    maxrec=self.maxrec, \
+	        #    debug=1)
                 
-                except Exception as e:
+            except Exception as e:
             
-                    if debug:
-                        logging.debug ('')
-                        logging.debug (f'Error: {str(e):s}')
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'Error: {str(e):s}')
                     
-                    print (str(e))
-                    return 
-        
-            else:
-                try:
-                    self.tap = KoaTap (self.tap_url, \
-                        format=self.format, \
-                        maxrec=self.maxrec)
-        
-                except Exception as e:
-            
-                    if debug:
-                        logging.debug ('')
-                        logging.debug (f'Error: {str(e):s}')
-                    
-                    print (str(e))
-                    return 
+                print (str(e))
+                return 
         
         if debug:
             logging.debug('')
@@ -1257,23 +1232,19 @@ class Archive:
 
         print ('submitting request...')
 
-        if debug:
-            logging.debug('')
-            logging.debug('call self.tap.send_async with debug')
+        logging.debug('')
+        logging.debug('call self.tap.send_async with debug')
             
-            retstr = self.tap.send_async (query, \
-                outpath=self.outpath, \
-                format=self.format, \
-                maxrec=self.maxrec, debug=1)
-        else:
-            logging.debug('')
-            logging.debug('call self.tap.send_async NO debug')
-            
-            retstr = self.tap.send_async (query, \
-                outpath=self.outpath, \
-                format=self.format, \
-                maxrec=self.maxrec)
+        retstr = self.tap.send_async (query, \
+            outpath=self.outpath, \
+            format=self.format, \
+            maxrec=self.maxrec)
         
+        #retstr = self.tap.send_async (query, \
+        #    outpath=self.outpath, \
+        #    format=self.format, \
+        #    maxrec=self.maxrec, debug=1)
+            
         if debug:
             logging.debug ('')
             logging.debug (f'return self.tap.send_async:')
@@ -1792,7 +1763,7 @@ class Archive:
                 logging.debug (f'm0str= {m0str:s}')
 
 
-        moss_url = self.baseurl + 'cgi-bin/MossAPI/nph-mossSearch?'
+        moss_url = self.baseurl + 'cgi-bin/MossAPIpgsql/nph-mossSearch?'
 
         param = dict()
         param['instrument'] = instrument
@@ -2668,7 +2639,6 @@ class Archive:
 #
 
 
-
     def print_data (self):
 #
 #{ Archive.print_date
@@ -2787,8 +2757,8 @@ class Archive:
 
         if debug:
             logging.debug ('')
-            logging.debug (f'baseurl= {self.baseurl:s}')
             logging.debug ('Enter download:')
+            logging.debug (f'baseurl= {self.baseurl:s}')
         
         if (len(metapath) == 0):
             print ('Failed to find required input parameter: metapath')
@@ -3086,18 +3056,23 @@ class Archive:
             logging.debug (f'outdir_calib= {outdir_calib:s}')
 
 #
-#    urls for nph-getKoa, and nph-getCaliblist
+#    urls for nph-koaDownload.py, and nph-getCaliblist.py
 #
+        if debug:
+            logging.debug ('')
+            logging.debug (f'self.baseurl= {self.baseurl:s}')
+        
         self.getkoa_url = self.baseurl + \
-            'cgi-bin/getKOA/nph-getKOA?return_mode=json&'
+            'cgi-bin/pykoaAPI/nph-koaDownload.py?'
         self.caliblist_url = self.baseurl + \
-            'cgi-bin/KoaAPI/nph-getCaliblist?'
-        self.lev1list_url = self.baseurl + 'cgi-bin/KoaAPI/nph-getL1list?'
+            'cgi-bin/pykoaAPI/nph-getCaliblist.py?'
+        self.lev1list_url = self.baseurl + 'cgi-bin/pykoaAPI/nph-getL1list.py?'
 
         if debug:
             logging.debug ('')
             logging.debug (f'getkoa_url= {self.getkoa_url:s}')
             logging.debug (f'caliblist_url= {self.caliblist_url:s}')
+            logging.debug (f'lev1list_url= {self.lev1list_url:s}')
 
 
         instrument = '' 
@@ -3158,7 +3133,7 @@ class Archive:
             ind = instrument.find ('LRIS')
             if (ind >= 0):
                 instrument = 'LRIS'
-  
+ 
             ind = -1
             ind = instrument.find ('NIRS')
             if (ind >= 0):
@@ -3175,7 +3150,7 @@ class Archive:
             #
             if (lev0file == 1):
             
-                url = self.getkoa_url + 'filehand=' + filehand
+                url = self.getkoa_url + 'filehand=' + filehand + '&debug=1'
                 filepath = outdir_lev0 + '/' + koaid
                 
                 if debug:
@@ -3187,6 +3162,9 @@ class Archive:
                 #    if file doesn't exist: download
                 #
                 isExist = os.path.exists (filepath)
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'isExist= {isExist}')
 	    
                 if (not isExist):
 
@@ -3258,10 +3236,8 @@ class Archive:
                             logging.debug ('')
                             logging.debug ('downloading lev1list')
 	    
-                        url = self.lev1list_url \
-                            + 'instrument=' + instrument \
-                            + '&koaid=' + koaid \
-                            + '&filehand=' + filehand
+                        url = self.lev1list_url + \
+                            'filehand=' + filehand + '&debug=1' 
 
 
                         if debug:
@@ -3301,6 +3277,10 @@ class Archive:
                     nlev1file = 0
                 
                     isExist = os.path.exists (lev1list)
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'lev1list isExist= {isExist}')
+                
                 
                     if (not isExist):
                         msg = 'Failed to get level 1 data list ' \
@@ -3452,7 +3432,8 @@ class Archive:
                     logging.debug (f'koaid_base= {koaid_base:s}')
 	    
                 caliblist = outdir_calib + '/' + koaid_base + '.caliblist.json'
-                caliblist_ipac = outdir_calib + '/' + koaid_base + '.caliblist.tbl'
+                caliblist_ipac = outdir_calib + '/' + koaid_base + \
+                    '.caliblist.tbl'
                 
                 if debug:
                     logging.debug ('')
@@ -3468,18 +3449,27 @@ class Archive:
 
                     if debug:
                         logging.debug ('')
-                        logging.debug ('downloading caliblist')
+                        logging.debug ('download caliblist')
 	    
                     url = self.caliblist_url \
-                        + 'instrument=' + instrument \
-                        + '&koaid=' + koaid
+                        + 'koaid=' + koaid + '&debug=1'
 
                     if debug:
                         logging.debug ('')
                         logging.debug (f'caliblist url= {url:s}')
 
                     try:
-                        self.__submit_request (url, caliblist, cookiejar)
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('call __submit_request')
+                        
+                        self.__submit_request (url, caliblist, cookiejar, \
+                            debug=1)
+                        
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('returned __submit_request')
+                        
                         ncaliblist = ncaliblist + 1
 
                         msg =  'Returned file written to: ' + caliblist   
@@ -3494,15 +3484,52 @@ class Archive:
                         #msg = 'Error downloading caliblist [' + \
                         #    caliblist + ']:' + str(e)
                         
-                        msg = 'No associated calibration list for ' + \
-                            koaid
-                        print (f'{msg:s}')
-                        continue 
-                         
+                        if debug:
+                            logging.debug ('')
+                            logging.debug ('exception submit_request')
+                        
+                        errmsg = 'Exception running getCaliblist: ' + str(e) 
+                        raise Exception (errmsg)
+
+                    if debug:
+                        logging.debug ('')
+                        logging.debug ('got here0')
+
+                if debug:
+                    logging.debug ('')
+                    logging.debug ('got here1')
 
                 #
-                #    download caliblist_ipac
+                #    extract calibpath_ipac path from caliblist (jsonfile)
+                #    to download caliblist_ipac
                 #
+
+                nrec = 0
+                jsondata = '' 
+                try:
+                    with open (caliblist) as fp:
+	    
+                        jsondata = json.load (fp) 
+
+                    fp.close() 
+
+                except Exception as e:
+        
+                    if debug:
+                        logging.debug ('')
+                        logging.debug (f'load caliblist jsonfile error')
+
+                    errmsg = 'Failed to read ' + caliblist
+	
+                    fp.close() 
+            
+                    raise Exception (errmsg)
+
+                calibpath_ipac = jsondata["calibpath"]
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'calibpath_ipac= {calibpath_ipac}')
+       
                 isExist = os.path.exists (caliblist_ipac)
 	    
                 if (not isExist):
@@ -3512,8 +3539,7 @@ class Archive:
                         logging.debug ('downloading caliblist_ipac')
 	    
                     url = self.caliblist_url \
-                        + 'instrument=' + instrument \
-                        + '&koaid=' + koaid + '&format=ipac'
+                        + 'calibpath=' + calibpath_ipac + '&debug=1'
 
                     if debug:
                         logging.debug ('')
@@ -3537,12 +3563,23 @@ class Archive:
                             koaid
                         print (f'{msg:s}')
                         continue 
-                         
 
 #
 #    check again after caliblist is successfully downloaded, if caliblist 
 #    exists: download calibfiles
 #     
+                nrec = len(jsondata)
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'downloadCalibfiles: nrec= {nrec:d}')
+
+                if (nrec == 0):
+
+                    status = 'error'	
+                    errmsg = 'No data found in the caliblist: ' + listpath
+	    
+                    raise Exception (errmsg)
+
                 isExist = os.path.exists (caliblist)
                                   
                 if (isExist):
@@ -3744,9 +3781,14 @@ class Archive:
                      
                     continue
               
-                url = self.baseurl + 'cgi-bin/KoaAPI/nph-dnloadL1data?' \
-                    + 'instrument=' + instrument + '&koaid=' + koaid \
-                    + '&filehand=' + filehand_lev1
+                url = self.baseurl + 'cgi-bin/pykoaAPI/nph-koaDownload.py?' \
+                    + 'datalevel1=lev1&koaid=' + koaid \
+                    + '&filehand=' + filehand_lev1 \
+                    + '&debug=1'
+                 
+                #url = self.baseurl + 'cgi-bin/KoaAPI/nph-dnloadL1data?' \
+                #    + 'instrument=' + instrument + '&koaid=' + koaid \
+                #    + '&filehand=' + filehand_lev1
                  
                 if debug:
                     logging.debug (f'url= {url:s}')
@@ -3845,10 +3887,15 @@ class Archive:
                         logging.debug ('')
                         logging.debug (f'filepath= {filepath:s}')
 
-                    url = self.baseurl + 'cgi-bin/KoaAPI/nph-dnloadL1data?' \
-                        + 'instrument=' + instrument + '&koaid=' + koaid \
-                        + '&filehand=' + filehand_lev1
+                    #url = self.baseurl + 'cgi-bin/KoaAPI/nph-dnloadL1data?' \
+                    #    + 'instrument=' + instrument + '&koaid=' + koaid \
+                    #    + '&filehand=' + filehand_lev1
                     
+                    url = self.baseurl + \
+                        'cgi-bin/pykoaAPI/nph-koaDownload.py?' + \
+                        'datalevel1=lev1&koaid=' + koaid + \
+                        '&filehand=' + filehand_lev1 + '&debug=1'
+                 
                     if debug:
                         logging.debug ('')
                         logging.debug (f'url= {url:s}')
@@ -4038,7 +4085,7 @@ class Archive:
 
         if debug:
             logging.debug ('')
-            logging.debug ('Enter database.__submit_request:')
+            logging.debug ('Enter __submit_request:')
             logging.debug (f'url= {url:s}')
             logging.debug (f'filepath= {filepath:s}')
        
@@ -4121,14 +4168,23 @@ class Archive:
                 logging.debug ('')
                 logging.debug (\
                     'return is a json structure: might be error message')
+                logging.debug ('response:')
+                logging.debug (self.response.text)
             
-            jsondata = json.loads (self.response.text)
-          
-            if debug:
-                logging.debug ('')
-                logging.debug ('jsondata:')
-                logging.debug (jsondata)
+            
+            try:
+                jsondata = json.loads (self.response.text)
+            
+            except Exception as e:
 
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'exception load response.text: {str(e):s}')
+
+            #if debug:
+            #    logging.debug ('')
+            #    logging.debug ('jsondata:')
+            #    logging.debug (jsondata)
  
             status = ''
             try: 
@@ -4264,46 +4320,45 @@ class Archive:
         if debug:
             logging.debug ('')
             logging.debug (f'content_type= {content_type:s}')
-       
-        if (content_type == 'application/json'):
-                
-            if debug:
-                logging.debug ('')
-                logging.debug (f'response.text: {response.text:s}')
+            logging.debug (f'response.text: {response.text:s}')
 
 #
-#    error message
+#   retrieve message
 #
-            try:
-                jsondata = json.loads (response.text)
+        status = ''
+        msg = ''
+        query = ''
+        try:
+            jsondata = json.loads (response.text)
                  
-                if debug:
-                    logging.debug ('')
-                    logging.debug ('jsondata loaded')
+            if debug:
+                logging.debug ('')
+                logging.debug ('jsondata loaded')
                 
-                status = jsondata['status']
+            status = jsondata['status']
+            if (status == 'ok'):
+                query = jsondata['query']
+            elif (status == 'error'):
                 msg = jsondata['msg']
                 
-                if debug:
-                    logging.debug ('')
-                    logging.debug (f'status: {status:s}')
-                    logging.debug (f'msg: {msg:s}')
 
-            except Exception:
-                msg = 'returned JSON object parse error'
+        except Exception:
+            msg = 'returned JSON object parse error'
                 
-                if debug:
-                    logging.debug ('')
-                    logging.debug ('JSON object parse error')
-      
-                
-            raise Exception (msg)
-            
             if debug:
                 logging.debug ('')
-                logging.debug (f'msg= {msg:s}')
-     
-        return (response.text)
+                logging.debug ('JSON object parse error')
+   
+        if debug:
+            logging.debug ('')
+            logging.debug (f'status: {status:s}')
+            logging.debug (f'msg: {msg:s}')
+            logging.debug (f'query: {query:s}')
+
+        if (len(msg) > 0):
+            raise Exception (msg)
+            
+        return (query)
 #
 #}  end Archive.__make_query
 #

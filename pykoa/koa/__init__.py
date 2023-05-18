@@ -13,6 +13,10 @@ class Conf (_config.ConfigNamespace):
         ['https://koa.ipac.caltech.edu/'],
         'Name of the KOA server to use.') 
 
+    dbms = _config.ConfigItem (
+        ['PostGreSQL'],
+        'Name of the KOA DBMS to use.') 
+
     cgipgm = _config.ConfigItem (
         ['TAP'],
         'alias location for TAP cgi program.') 
