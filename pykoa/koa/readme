@@ -1,0 +1,7 @@
+May 24, 2023 (Mihseh Kong)
+
+Added TAP.ini.oracle and TAP.ini.pgsql to git for reference purpose; when running
+core.py.pgsql TAP.ini.pgsql should be used and similarly runnin core.py.oracle, 
+TAP.ini.oracle should be used.  When the switch is final, these files can be 
+cleaned up from PyKOA git repository.
+
