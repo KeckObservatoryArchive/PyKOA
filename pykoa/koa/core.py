@@ -4087,12 +4087,36 @@ class Archive:
             logging.debug (self.response.status_code)
       
       
-        if (self.response.status_code == 200):
-            msg = ''
-        else:
-            msg = 'Failed to submit the request'
-	    
-            raise Exception (msg)
+        if (self.response.status_code != 200):
+
+            # Try to extract the error message from the VOTable response body
+            # before raising, so the user sees the actual server message rather
+            # than a generic "Failed to submit the request."
+            errmsg = ''
+            try:
+                content_type = self.response.headers.get('Content-type', '')
+                if 'xml' in content_type:
+                    errmsg = self.extract_xmlerr(self.response.text)
+            except Exception:
+                pass
+
+            if (self.response.status_code == 403):
+                if errmsg:
+                    msg = f'Access denied: {errmsg}'
+                else:
+                    msg = 'Access denied: you are not permitted to access this resource.'
+            elif (self.response.status_code == 400):
+                if errmsg:
+                    msg = f'Bad request: {errmsg}'
+                else:
+                    msg = 'Bad request: the server rejected the query.'
+            else:
+                if errmsg:
+                    msg = errmsg
+                else:
+                    msg = f'Request failed with HTTP status {self.response.status_code}.'
+
+            raise Exception(msg)
             return
                        
         if debug:
