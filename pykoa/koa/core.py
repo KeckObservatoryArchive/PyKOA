@@ -5169,7 +5169,7 @@ class KoaTap:
                 self.response = requests.post (url, data= self.datadict, \
                     cookies=self.cookiejar, allow_redirects=False, stream=True)
             else: 
-                self.response = requesrs.post (url, data= self.datadict, \
+                self.response = requests.post (url, data= self.datadict, \
                     allow_redicts=False, stream=True)
 
             if debug:
