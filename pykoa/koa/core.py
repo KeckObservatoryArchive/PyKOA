@@ -4127,11 +4127,15 @@ class Archive:
             logging.debug (self.response.status_code)
       
       
+        # Non-200 responses indicate the server rejected or failed the request.
+        # Raise an exception with the most informative message available:
+        # prefer the QUERY_STATUS=ERROR message from the VOTable body over a
+        # generic HTTP-status string.
         if (self.response.status_code != 200):
 
-            # Previously raised a generic "Failed to submit the request" for all
-            # non-200 responses. Parse the VOTable body instead so the caller
-            # gets the actual server message, with 403/400-specific prefixes.
+            # Parse the VOTable body for a server-provided error message;
+            # fall back to HTTP-status-specific text if the body is absent
+            # or not parseable XML.
             errmsg = ''
             try:
                 content_type = self.response.headers.get('Content-type', '')
@@ -4144,16 +4148,30 @@ class Archive:
                 # to the HTTP-status-specific messages below.
                 logging.debug(f'extract_xmlerr failed to parse error response: {str(e)}')
 
+            # 403: proprietary data access rejected or table access denied.
+            # nexsciTAP returns this when the user lacks permission for the
+            # requested table or when the session cookie is missing/expired
+            # for a proprietary query.
             if (self.response.status_code == 403):
                 if errmsg:
                     msg = f'Access denied: {errmsg}'
                 else:
                     msg = 'Access denied: you are not permitted to access this resource.'
+
+            # 400: the server understood the request but rejected it as invalid.
+            # Typical causes: malformed ADQL, unsupported format, missing
+            # required parameter. The VOTable body usually has a QUERY_STATUS=ERROR
+            # INFO element with the specific rejection reason.
             elif (self.response.status_code == 400):
                 if errmsg:
                     msg = f'Bad request: {errmsg}'
                 else:
                     msg = 'Bad request: the server rejected the query.'
+
+            # Any other non-200 status (500, 503, etc.). Rare in normal operation
+            # but can occur during server maintenance or internal errors. Use the
+            # VOTable body message if available, otherwise report the raw HTTP
+            # status code so the caller has enough to diagnose the failure.
             else:
                 if errmsg:
                     msg = errmsg
