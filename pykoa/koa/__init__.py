@@ -11,7 +11,7 @@ class Conf (_config.ConfigNamespace):
     """
     server = _config.ConfigItem (
         ['https://koa.ipac.caltech.edu/'],
-        'Name of the KOA server to use.') 
+        'Name of the KOA server to use.')
 
     cgipgm = _config.ConfigItem (
         ['TAP'],
