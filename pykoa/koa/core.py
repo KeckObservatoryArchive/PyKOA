@@ -1279,22 +1279,40 @@ class Archive:
             logging.debug (f'return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
 
-        retstr_lower = retstr.lower()
+        # Previously used substring search for 'error' to gate VOTable error
+        # parsing, which risked false positives (column names like 'mag_error')
+        # and false negatives (error responses without the word 'error' in the
+        # body). Now try extract_xmlerr directly — if the response is a VOTable
+        # with QUERY_STATUS=ERROR it returns the message and we raise; otherwise
+        # it raises and we fall through to the os.path.exists check below.
+        errmsg = None
+        try:
+            errmsg = self.tap.extract_xmlerr(retstr)
+        except Exception as e:
+            # extract_xmlerr raised — the response is not a VOTable error body
+            # (malformed XML, missing VOTABLE/INFO structure, QUERY_STATUS !=
+            # ERROR, or a non-XML response like a job URL). Log for diagnostics
+            # when debug is enabled and fall through to the file check below.
+            logging.debug(f'extract_xmlerr failed to parse error response: {str(e)}')
 
-        indx = retstr_lower.find ('error')
-    
-#        if debug:
-#            logging.debug ('')
-#            logging.debug (f'indx= {indx:d}')
-
-        if (indx >= 0):
-            print (retstr)
-            return
-            #sys.exit()
+        if errmsg:
+            raise Exception(errmsg)
 
 #
-#    no error: 
+#    extract_xmlerr found no VOTable error -- verify the file was written.
+#    Some server failures (e.g. CGI init errors) return a non-XML response,
+#    causing extract_xmlerr to raise above. If no file was written the response
+#    was not a valid result.
 #
+        if not os.path.exists(self.outpath):
+            # Show short, human-readable responses (e.g. 'WEB') directly.
+            # For long responses (e.g. raw connection exception traces) use a
+            # clean generic message so the caller is not shown an internal dump.
+            if len(retstr) <= 80 and '\n' not in retstr:
+                raise Exception(f'Query failed: server returned unexpected response: {retstr}')
+            else:
+                raise Exception('Query failed: server returned an error response.')
+
         print (retstr)
         return
 #
@@ -1502,18 +1520,40 @@ class Archive:
             logging.debug (f'return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
 
-        retstr_lower = retstr.lower()
+        # Previously used substring search for 'error' to gate VOTable error
+        # parsing, which risked false positives (column names like 'mag_error')
+        # and false negatives (error responses without the word 'error' in the
+        # body). Now try extract_xmlerr directly — if the response is a VOTable
+        # with QUERY_STATUS=ERROR it returns the message and we raise; otherwise
+        # it raises and we fall through to the os.path.exists check below.
+        errmsg = None
+        try:
+            errmsg = self.tap.extract_xmlerr(retstr)
+        except Exception as e:
+            # extract_xmlerr raised — the response is not a VOTable error body
+            # (malformed XML, missing VOTABLE/INFO structure, QUERY_STATUS !=
+            # ERROR, or a non-XML response like a job URL). Log for diagnostics
+            # when debug is enabled and fall through to the file check below.
+            logging.debug(f'extract_xmlerr failed to parse error response: {str(e)}')
 
-        indx = retstr_lower.find ('error')
-    
-        if (indx >= 0):
-            print (retstr)
-            return
-            #sys.exit()
+        if errmsg:
+            raise Exception(errmsg)
 
 #
-#    no error: 
+#    extract_xmlerr found no VOTable error -- verify the file was written.
+#    Some server failures (e.g. CGI init errors) return a non-XML response,
+#    causing extract_xmlerr to raise above. If no file was written the response
+#    was not a valid result.
 #
+        if not os.path.exists(self.outpath):
+            # Show short, human-readable responses (e.g. 'WEB') directly.
+            # For long responses (e.g. raw connection exception traces) use a
+            # clean generic message so the caller is not shown an internal dump.
+            if len(retstr) <= 80 and '\n' not in retstr:
+                raise Exception(f'Query failed: server returned unexpected response: {retstr}')
+            else:
+                raise Exception('Query failed: server returned an error response.')
+
         print (retstr)
         return
 #
@@ -4087,12 +4127,58 @@ class Archive:
             logging.debug (self.response.status_code)
       
       
-        if (self.response.status_code == 200):
-            msg = ''
-        else:
-            msg = 'Failed to submit the request'
-	    
-            raise Exception (msg)
+        # Non-200 responses indicate the server rejected or failed the request.
+        # Raise an exception with the most informative message available:
+        # prefer the QUERY_STATUS=ERROR message from the VOTable body over a
+        # generic HTTP-status string.
+        if (self.response.status_code != 200):
+
+            # Parse the VOTable body for a server-provided error message;
+            # fall back to HTTP-status-specific text if the body is absent
+            # or not parseable XML.
+            errmsg = ''
+            try:
+                content_type = self.response.headers.get('Content-type', '')
+                if 'xml' in content_type:
+                    errmsg = self.extract_xmlerr(self.response.text)
+            except Exception as e:
+                # extract_xmlerr failed to parse the error body (malformed XML,
+                # missing VOTABLE/INFO structure, etc.). Log for diagnostics so
+                # the failure is visible when debug is enabled, then fall back
+                # to the HTTP-status-specific messages below.
+                logging.debug(f'extract_xmlerr failed to parse error response: {str(e)}')
+
+            # 403: proprietary data access rejected or table access denied.
+            # nexsciTAP returns this when the user lacks permission for the
+            # requested table or when the session cookie is missing/expired
+            # for a proprietary query.
+            if (self.response.status_code == 403):
+                if errmsg:
+                    msg = f'Access denied: {errmsg}'
+                else:
+                    msg = 'Access denied: you are not permitted to access this resource.'
+
+            # 400: the server understood the request but rejected it as invalid.
+            # Typical causes: malformed ADQL, unsupported format, missing
+            # required parameter. The VOTable body usually has a QUERY_STATUS=ERROR
+            # INFO element with the specific rejection reason.
+            elif (self.response.status_code == 400):
+                if errmsg:
+                    msg = f'Bad request: {errmsg}'
+                else:
+                    msg = 'Bad request: the server rejected the query.'
+
+            # Any other non-200 status (500, 503, etc.). Rare in normal operation
+            # but can occur during server maintenance or internal errors. Use the
+            # VOTable body message if available, otherwise report the raw HTTP
+            # status code so the caller has enough to diagnose the failure.
+            else:
+                if errmsg:
+                    msg = errmsg
+                else:
+                    msg = f'Request failed with HTTP status {self.response.status_code}.'
+
+            raise Exception(msg)
             return
                        
         if debug:
@@ -5257,6 +5343,29 @@ class KoaTap:
 #
 #{ KoaTap.extract_xmlerr
 #
+        """
+        Parse a nexsciTAP VOTable error response and return the error message.
+
+        nexsciTAP returns errors in this structure (DALI 1.1 §4.4):
+
+            <VOTABLE>
+              <RESOURCE>
+                <INFO name="QUERY_STATUS" value="ERROR">error message text</INFO>
+              </RESOURCE>
+            </VOTABLE>
+
+        Returns the INFO text content (the server error message) if
+        QUERY_STATUS=ERROR is found.
+
+        Raises Exception if:
+          - xmlstruct cannot be parsed as XML
+          - the VOTABLE/RESOURCE/INFO structure is missing
+          - INFO @value is not 'error' (e.g. OVERFLOW, OK)
+
+        Note: this format is nexsciTAP-specific. If the server changes its
+        error response format this method will raise and callers fall back
+        to generic messages.
+        """
         debug = 0
 
         if debug:
