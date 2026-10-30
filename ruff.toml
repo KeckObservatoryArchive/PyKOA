@@ -16,3 +16,8 @@ select = ["E", "F", "W", "I"]
 #   codebase. This is a ratchet — new code should stay under 88 chars, but fixing
 #   all existing long lines is a separate task.
 ignore = ["E501"]
+
+[format]
+# Do not reformat Python code blocks inside markdown files — it collapses
+# multi-line examples to single lines, making them unreadable.
+exclude = ["*.md"]
