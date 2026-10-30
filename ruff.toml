@@ -12,5 +12,7 @@ exclude = ["tests/test_koa.py", "core.py", "notebooks"]
 select = ["E", "F", "W"]
 
 # Ignored:
-# - E501: line too long — many long lines in the original codebase
+# - E501 (line too long): core.py has many lines over 88 chars from the original
+#   codebase. This is a ratchet — new code should stay under 88 chars, but fixing
+#   all existing long lines is a separate task.
 ignore = ["E501"]
