@@ -49,13 +49,10 @@ POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os 
-import sys
-import io
 import getpass 
 import logging
 import time
 import json
-import lxml
 #import ijson
 import xmltodict 
 import tempfile
@@ -67,7 +64,7 @@ import http.cookiejar
 
 from datetime import date
 #from astropy.coordinates import name_resolve
-from astropy.table import Table, Column
+from astropy.table import Table
 
 from . import conf
 
@@ -376,7 +373,7 @@ class Archive:
             logging.debug ('')
             logging.debug (f'contenttype= {contenttype:s}')
 
-        jsondata = json.loads (response.text);
+        jsondata = json.loads (response.text)
    
         for key,val in jsondata.items():
                 
@@ -1117,8 +1114,8 @@ class Archive:
         try:
             self.maxrec = float(self.maxrec)
             self.maxrec = int(self.maxrec)
-        except Exception as e:
-            print (f'Failed to convert maxrec: ' + str(self.maxrec) + \
+        except Exception:
+            print ('Failed to convert maxrec: ' + str(self.maxrec) + \
                 ' to integer.')
             return
 
@@ -1276,7 +1273,7 @@ class Archive:
         
         if debug:
             logging.debug ('')
-            logging.debug (f'return self.tap.send_async:')
+            logging.debug ('return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
 
         # Previously used substring search for 'error' to gate VOTable error
@@ -1517,7 +1514,7 @@ class Archive:
         
         if debug:
             logging.debug ('')
-            logging.debug (f'return self.tap.send_async:')
+            logging.debug ('return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
 
         # Previously used substring search for 'error' to gate VOTable error
@@ -1883,7 +1880,7 @@ class Archive:
 
         if debug:
             logging.debug ('')
-            logging.debug (f'moss full url sent to server:')
+            logging.debug ('moss full url sent to server:')
             logging.debug (f'url= {url:s}')
 
 #
@@ -2253,7 +2250,7 @@ class Archive:
                 logging.debug ('')
                 logging.debug ('here0-4') 
             
-        except Exception as e:
+        except Exception:
 
             if debug:
                 logging.debug ('')
@@ -3008,7 +3005,7 @@ class Archive:
             return
         """
 
-        srow = 0;
+        srow = 0
         erow = len_tbl - 1
 
         if ('start_row' in kwargs): 
@@ -3362,7 +3359,7 @@ class Archive:
                                 nlev1file = int(jsonData["result"]["nlev1file"])
                             fp.close() 
                             
-                        except Exception as e:
+                        except Exception:
         
                             if debug:
                                 logging.debug ('')
@@ -3382,7 +3379,7 @@ class Archive:
                     
                         if debug:
                             logging.debug ('')
-                            logging.debug (f'got here:')
+                            logging.debug ('got here:')
                             logging.debug (f'nlev1file= {nlev1file:d}')
   
                         msg = 'No level 1 data found for koaid: [' \
@@ -3417,7 +3414,7 @@ class Archive:
                     
                             if debug:
                                 logging.debug ('')
-                                logging.debug (f'returned __download_lev1files')
+                                logging.debug ('returned __download_lev1files')
                                 logging.debug (f'nlev1= {nlev1:d}')
                         
                             ndnloaded_lev1 = ndnloaded_lev1 + nlev1
@@ -3528,7 +3525,7 @@ class Archive:
                             logging.debug ('returned __submit_request')
                             logging.debug (f'msg= {msg:s}')
             
-                    except Exception as e:
+                    except Exception:
                         #print (f'File [{caliblist:s}] download: {str(e):s}')
                         #msg = 'Error downloading caliblist [' + \
                         #    caliblist + ']:' + str(e)
@@ -3567,7 +3564,7 @@ class Archive:
                             logging.debug ('returned __submit_request')
                             logging.debug (f'msg= {msg:s}')
             
-                    except Exception as e:
+                    except Exception:
                         #print (f'File [{caliblist:s}] download: {str(e):s}')
                         #msg = 'Error downloading caliblist_ipac [' + \
                         #    caliblist_ipac + ']:' + str(e)
@@ -3689,7 +3686,7 @@ class Archive:
    
         if debug:
             logging.debug ('')
-            logging.debug (f'Enter __download_lev1files:')
+            logging.debug ('Enter __download_lev1files:')
             logging.debug (f'outdir_lev1= {outdir_lev1:s}')
 
 #
@@ -3723,7 +3720,7 @@ class Archive:
                     
         if debug:
             logging.debug ('')
-            logging.debug (f'data:')
+            logging.debug ('data:')
             logging.debug (data)
 
 
@@ -3965,7 +3962,7 @@ class Archive:
                 jsonData = json.load (fp) 
                 data = jsonData["table"]
 
-        except Exception as e:
+        except Exception:
         
             if debug:
                 logging.debug ('')
@@ -4074,7 +4071,7 @@ class Archive:
             logging.debug (f'url= {url:s}')
             logging.debug (f'filepath= {filepath:s}')
        
-            if not (cookiejar is None):  
+            if cookiejar is not None:  
             
                 for cookie in cookiejar:
                     
@@ -4451,7 +4448,7 @@ class objLookup:
 
             if self.debug:
                 logging.debug ('')
-                logging.debug (f'response:')
+                logging.debug ('response:')
                 logging.debug (self.response)
 
         except Exception as e:
@@ -4776,7 +4773,7 @@ class KoaTap:
         if (len(self.cookiepath) > 0):
         
             try:
-                self.cookiejar.load (ignore_discard=True, ignore_expires=True);
+                self.cookiejar.load (ignore_discard=True, ignore_expires=True)
             
                 if self.debug:
                     logging.debug (
@@ -5023,7 +5020,7 @@ class KoaTap:
         
             if debug:
                 logging.debug ('')
-                logging.debug (f'koajob instantiated')
+                logging.debug ('koajob instantiated')
                 logging.debug (f'phase= {self.koajob.phase:s}')
        
        
@@ -5729,7 +5726,7 @@ class KoaTap:
 
                 if debug:
                     logging.debug ('')
-                    logging.debug (f'returned koajob.get_result')
+                    logging.debug ('returned koajob.get_result')
         
             except Exception as e:
             
@@ -6536,7 +6533,7 @@ class KoaJob:
      
         if self.debug:
             logging.debug ('')
-            logging.debug (f'self.job= ')
+            logging.debug ('self.job= ')
             logging.debug (self.job)
 
 
