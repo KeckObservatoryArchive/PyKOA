@@ -289,7 +289,7 @@ class Archive:
             return
 
         userid = ""
-        password = ""
+        password = ""  # nosec B105 — empty string init, not a hardcoded credential
         if "userid" in kwargs:
             userid = kwargs.get("userid")
 
@@ -5184,8 +5184,8 @@ class KoaTap:
 
             try:
                 self.response.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug("response.close() raised: %s", e)
 
             return self.msg
 
