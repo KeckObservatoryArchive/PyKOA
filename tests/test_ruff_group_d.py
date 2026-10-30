@@ -30,8 +30,8 @@ import pytest
 
 from pykoa.koa.core import KoaTap
 
-SRC = pathlib.Path(__file__).parent.parent / 'pykoa' / 'koa' / 'core.py'
-INIT = pathlib.Path(__file__).parent.parent / 'pykoa' / 'koa' / '__init__.py'
+SRC = pathlib.Path(__file__).parent.parent / "pykoa" / "koa" / "core.py"
+INIT = pathlib.Path(__file__).parent.parent / "pykoa" / "koa" / "__init__.py"
 
 
 def _method_source(method_name, after_line=0):
@@ -47,17 +47,18 @@ def _method_source(method_name, after_line=0):
     for lineno, line in enumerate(src):
         if lineno < after_line:
             continue
-        if f'def {method_name}' in line:
+        if f"def {method_name}" in line:
             in_method = True
             started = lineno
-        elif in_method and lineno > started and line.strip().startswith('def '):
+        elif in_method and lineno > started and line.strip().startswith("def "):
             break
         if in_method:
             lines.append(line)
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 # ── Fix 1: pid removed ────────────────────────────────────────────────────────
+
 
 def test_pid_assignment_removed_from_koatap_init():
     """pid = os.getpid() was dead code — process ID was never used.
@@ -66,8 +67,8 @@ def test_pid_assignment_removed_from_koatap_init():
     self.datadict['debug'] = 1, which is the line that actually sends
     debug=1 to the TAP server.
     """
-    src = _method_source('__init__', after_line=4672)  # KoaTap.__init__ at line 4673
-    assert 'pid = os.getpid()' not in src, (
+    src = _method_source("__init__", after_line=4672)  # KoaTap.__init__ at line 4673
+    assert "pid = os.getpid()" not in src, (
         "Dead 'pid = os.getpid()' found in KoaTap.__init__. "
         "pid is never used after assignment. Remove it."
     )
@@ -77,10 +78,10 @@ def test_server_debug_comment_is_above_datadict_debug():
     """'# turn on server debug' comment must sit above self.datadict['debug'] = 1,
     the line it actually describes."""
     src = SRC.read_text()
-    debug_comment_pos = src.find('turn on server debug')
-    datadict_debug_pos = src.find("self.datadict['debug'] = 1")
+    debug_comment_pos = src.find("turn on server debug")
+    datadict_debug_pos = src.find('self.datadict["debug"] = 1')
     assert debug_comment_pos != -1, "Comment 'turn on server debug' not found"
-    assert datadict_debug_pos != -1, "self.datadict['debug'] = 1 not found"
+    assert datadict_debug_pos != -1, 'self.datadict["debug"] = 1 not found'
     # Comment must appear just before the datadict['debug'] line
     between = src[debug_comment_pos:datadict_debug_pos]
     assert len(between) < 50, (
@@ -94,14 +95,15 @@ def test_koatap_init_still_sets_server_debug_flag():
 
     The TAP server debug flag must still be set after construction.
     """
-    tap = KoaTap('https://koa.example.test/TAP')
-    assert tap.datadict.get('debug') == 1, (
+    tap = KoaTap("https://koa.example.test/TAP")
+    assert tap.datadict.get("debug") == 1, (
         "self.datadict['debug'] should be 1 after KoaTap.__init__. "
         "Removing pid may have accidentally removed the server debug flag."
     )
 
 
 # ── Fix 2: bare except → except Exception ────────────────────────────────────
+
 
 def test_no_bare_except_in_koatap_init():
     """KoaTap.__init__ must not use bare 'except:' around cookiejar.load().
@@ -110,12 +112,12 @@ def test_no_bare_except_in_koatap_init():
     be swallowed. except Exception catches all realistic cookie-file errors:
     http.cookiejar.LoadError, OSError, FileNotFoundError, PermissionError.
     """
-    src = _method_source('__init__', after_line=4672)  # KoaTap.__init__ at line 4673
-    assert 'except:' not in src, (
+    src = _method_source("__init__", after_line=4544)  # KoaTap.__init__ at line 4545
+    assert "except:" not in src, (
         "Bare 'except:' found in KoaTap.__init__. "
         "Use 'except Exception:' to avoid catching KeyboardInterrupt/SystemExit."
     )
-    assert 'except Exception:' in src, (
+    assert "except Exception:" in src, (
         "'except Exception:' not found in KoaTap.__init__. "
         "Should be 'except Exception:' not bare 'except:'."
     )
@@ -127,12 +129,12 @@ def test_koatap_init_bad_cookie_file_raises_exception():
     This confirms except Exception: catches the cookie-load error correctly
     and re-raises it as a clean Exception for callers.
     """
-    with pytest.raises(Exception, match='Error: failed to load cookie file'):
-        KoaTap('https://koa.example.test/TAP',
-               cookiefile='/nonexistent/cookies.txt')
+    with pytest.raises(Exception, match="Error: failed to load cookie file"):
+        KoaTap("https://koa.example.test/TAP", cookiefile="/nonexistent/cookies.txt")
 
 
 # ── Fix 3: data = response.json() → bare call ─────────────────────────────────
+
 
 def test_no_data_assignment_in_send_sync_json_branch():
     """send_sync's JSON branch must validate parseability without binding the result.
@@ -141,21 +143,22 @@ def test_no_data_assignment_in_send_sync_json_branch():
     is needed to detect parse failures. The bare call self.response.json()
     keeps the validation while dropping the unused name.
     """
-    src = _method_source('send_sync')
-    assert 'data = self.response.json()' not in src, (
+    src = _method_source("send_sync")
+    assert "data = self.response.json()" not in src, (
         "Dead 'data = self.response.json()' found in send_sync. "
         "The parsed JSON is never used. Use bare 'self.response.json()' instead."
     )
-    assert 'self.response.json()' in src, (
+    assert "self.response.json()" in src, (
         "Bare 'self.response.json()' not found in send_sync. "
         "The call must remain to validate that the response is parseable JSON."
     )
-    assert 'data = None' not in src, (
+    assert "data = None" not in src, (
         "Dead 'data = None' initialisation found in send_sync. Remove it."
     )
 
 
 # ── Fix 4: noqa on deferred import ───────────────────────────────────────────
+
 
 def test_noqa_e402_on_deferred_core_import():
     """__init__.py must suppress E402 on the deferred import, not move it.
@@ -165,11 +168,11 @@ def test_noqa_e402_on_deferred_core_import():
     exist in __init__.py's namespace when that line runs.
     """
     init_src = INIT.read_text()
-    assert 'from .core import' in init_src
+    assert "from .core import" in init_src
     import_line = next(
-        line for line in init_src.splitlines() if 'from .core import' in line
+        line for line in init_src.splitlines() if "from .core import" in line
     )
-    assert 'noqa: E402' in import_line, (
+    assert "noqa: E402" in import_line, (
         "The 'from .core import ...' line is missing '# noqa: E402'. "
         "This import must stay below conf = Conf() to avoid a circular import; "
         "add the noqa comment to suppress the ruff warning."
@@ -183,8 +186,8 @@ def test_deferred_import_still_after_conf_instantiation():
     at module scope, and conf wouldn't exist yet if the import were first.
     """
     init_src = INIT.read_text()
-    conf_pos = init_src.find('conf = Conf()')
-    import_pos = init_src.find('from .core import')
+    conf_pos = init_src.find("conf = Conf()")
+    import_pos = init_src.find("from .core import")
     assert conf_pos != -1 and import_pos != -1
     assert conf_pos < import_pos, (
         "'from .core import' appears before 'conf = Conf()' in __init__.py. "
@@ -197,6 +200,8 @@ def test_package_still_importable():
     import importlib
 
     import pykoa.koa
+
     importlib.reload(pykoa.koa)
     from pykoa.koa import Archive, Koa, KoaJob, KoaTap, conf
+
     assert all([Koa, Archive, KoaTap, KoaJob, conf])

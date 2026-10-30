@@ -1,25 +1,22 @@
 """
 The pykoa package is KOA's (Keck Online Archive) python client interface for querying KOA's database and downloading KOA data.
 """
+
 from astropy import config as _config
 
 
-class Conf (_config.ConfigNamespace):
-
+class Conf(_config.ConfigNamespace):
     """
     Configuration parameters for 'astroquery.koa'.
     """
-    server = _config.ConfigItem (
-        ['https://koa.ipac.caltech.edu/'],
-        'Name of the KOA server to use.')
 
-    cgipgm = _config.ConfigItem (
-        ['TAP'],
-        'alias location for TAP cgi program.')
+    server = _config.ConfigItem(
+        ["https://koa.ipac.caltech.edu/"], "Name of the KOA server to use."
+    )
 
-    timeout = _config.ConfigItem (
-        60,
-        'Time limit for connecting to KOA server.')
+    cgipgm = _config.ConfigItem(["TAP"], "alias location for TAP cgi program.")
+
+    timeout = _config.ConfigItem(60, "Time limit for connecting to KOA server.")
 
 
 conf = Conf()
@@ -31,6 +28,11 @@ from .core import (  # noqa: E402 — must follow conf = Conf() to avoid circula
     KoaTap,
 )
 
-__all__ = ['Koa', 'Archive', 'KoaTap', 'KoaJob',
-           'Conf', 'conf',
-           ]
+__all__ = [
+    "Koa",
+    "Archive",
+    "KoaTap",
+    "KoaJob",
+    "Conf",
+    "conf",
+]

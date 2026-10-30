@@ -54,4 +54,4 @@ jobs:
         run: pip install "ruff>=0.13.0,<0.14.0"
 
       - name: Run ruff
-        run: ruff check .
+        run: ruff check . && ruff format . --check
