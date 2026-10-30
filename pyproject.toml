@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pykoa"
+version = "1.7.2"
+description = "KOA archive access client"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Mihseh Kong", email = "mihseh@ipac.caltech.edu"},
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: Other/Proprietary License",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    "requests",
+    "xmltodict",
+    "bs4",
+    "lxml",
+    "astropy",
+]
+
+[project.urls]
+Homepage = "https://github.com/KeckObservatoryArchive/PyKOA"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0,<9.0.0",
+    "pytest-timeout>=2.4.0,<3.0.0",
+    "bandit>=1.9.4,<2.0.0",
+    "requests-mock>=1.12.0,<2.0.0",
+    "ruff>=0.13.0,<0.14.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pykoa*"]
+
+[tool.ruff]
+# Excluded from all ruff checks:
+# - tests/test_koa.py: entirely commented-out legacy test file
+# - core.py (root): stray unpackaged 2022 copy of pykoa/koa/core.py
+# - notebooks/: dev scratch, not part of the package
+exclude = ["tests/test_koa.py", "core.py", "notebooks"]
+
+[tool.ruff.lint]
+# Enforce pycodestyle errors/warnings (E/W), pyflakes (F), and isort (I).
+select = ["E", "F", "W", "I"]
+
+# Ignored:
+# - E501 (line too long): core.py has many lines over 88 chars from the original
+#   codebase. This is a ratchet -- new code should stay under 88 chars, but fixing
+#   all existing long lines is a separate task.
+ignore = ["E501"]
+
+[tool.ruff.format]
+# Do not reformat Python code blocks inside markdown files -- it collapses
+# multi-line examples to single lines, making them unreadable.
+exclude = ["*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v -m 'not e2e'"
+markers = [
+    "e2e: end-to-end tests against the live KOA TAP service (requires network)",
+    "e2e_auth: end-to-end tests requiring KOA credentials",
+]
