@@ -1,3 +1,5 @@
+[![Tests](https://github.com/KeckObservatoryArchive/PyKOA/actions/workflows/tests.yml/badge.svg)](https://github.com/KeckObservatoryArchive/PyKOA/actions/workflows/tests.yml)
+
 KOA Table Access Protocol (TAP) Client
 ======================================
 

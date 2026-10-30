@@ -24,7 +24,7 @@ class Conf (_config.ConfigNamespace):
 
 conf = Conf()
 
-from .core import Koa, Archive, KoaTap, KoaJob
+from .core import Koa, Archive, KoaTap, KoaJob  # noqa: E402 — must follow conf = Conf() to avoid circular import
 
 __all__ = ['Koa', 'Archive', 'KoaTap', 'KoaJob', 
            'Conf', 'conf',

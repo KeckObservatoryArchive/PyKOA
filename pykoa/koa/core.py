@@ -49,13 +49,10 @@ POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os 
-import sys
-import io
 import getpass 
 import logging
 import time
 import json
-import lxml
 #import ijson
 import xmltodict 
 import tempfile
@@ -67,7 +64,7 @@ import http.cookiejar
 
 from datetime import date
 #from astropy.coordinates import name_resolve
-from astropy.table import Table, Column
+from astropy.table import Table
 
 from . import conf
 
@@ -145,7 +142,7 @@ class Archive:
                 logging.basicConfig (filename=self.debugfname, \
                     level=logging.DEBUG)
     
-                with open (self.debugfname, 'w') as fdebug:
+                with open (self.debugfname, 'w'):
                     pass
  
         if self.debug:
@@ -252,7 +249,7 @@ class Archive:
                     logging.basicConfig (filename=self.debugfname, \
                         level=logging.DEBUG)
     
-                    with open (self.debugfname, 'w') as fdebug:
+                    with open (self.debugfname, 'w'):
                         pass
 
             if self.debug:
@@ -376,7 +373,7 @@ class Archive:
             logging.debug ('')
             logging.debug (f'contenttype= {contenttype:s}')
 
-        jsondata = json.loads (response.text);
+        jsondata = json.loads (response.text)
    
         for key,val in jsondata.items():
                 
@@ -494,7 +491,7 @@ class Archive:
                 logging.basicConfig (filename=debugfname, \
                     level=logging.DEBUG)
     
-                with open (debugfname, 'w') as fdebug:
+                with open (debugfname, 'w'):
                     pass
 
             if debug:
@@ -630,7 +627,7 @@ class Archive:
                     logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w'):
                         pass
 
             if debug:
@@ -740,7 +737,7 @@ class Archive:
                     logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w'):
                         pass
 
             if debug:
@@ -842,7 +839,7 @@ class Archive:
                     logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w'):
                         pass
 
             if debug:
@@ -1048,7 +1045,7 @@ class Archive:
                     logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w'):
                         pass
 
             if debug:
@@ -1117,8 +1114,8 @@ class Archive:
         try:
             self.maxrec = float(self.maxrec)
             self.maxrec = int(self.maxrec)
-        except Exception as e:
-            print (f'Failed to convert maxrec: ' + str(self.maxrec) + \
+        except Exception:
+            print ('Failed to convert maxrec: ' + str(self.maxrec) + \
                 ' to integer.')
             return
 
@@ -1276,7 +1273,7 @@ class Archive:
         
         if debug:
             logging.debug ('')
-            logging.debug (f'return self.tap.send_async:')
+            logging.debug ('return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
 
         # Previously used substring search for 'error' to gate VOTable error
@@ -1361,7 +1358,7 @@ class Archive:
                     logging.basicConfig (filename=debugfname, \
                         level=logging.DEBUG)
     
-                    with open (debugfname, 'w') as fdebug:
+                    with open (debugfname, 'w'):
                         pass
 
             if debug:
@@ -1517,7 +1514,7 @@ class Archive:
         
         if debug:
             logging.debug ('')
-            logging.debug (f'return self.tap.send_async:')
+            logging.debug ('return self.tap.send_async:')
             logging.debug (f'retstr= {retstr:s}')
 
         # Previously used substring search for 'error' to gate VOTable error
@@ -1673,7 +1670,7 @@ class Archive:
                 logging.basicConfig (filename=debugfname, \
                     level=logging.DEBUG)
     
-                with open (debugfname, 'w') as fdebug:
+                with open (debugfname, 'w'):
                     pass
 
 #
@@ -1883,7 +1880,7 @@ class Archive:
 
         if debug:
             logging.debug ('')
-            logging.debug (f'moss full url sent to server:')
+            logging.debug ('moss full url sent to server:')
             logging.debug (f'url= {url:s}')
 
 #
@@ -2253,7 +2250,7 @@ class Archive:
                 logging.debug ('')
                 logging.debug ('here0-4') 
             
-        except Exception as e:
+        except Exception:
 
             if debug:
                 logging.debug ('')
@@ -2329,9 +2326,9 @@ class Archive:
 #
 # { download result metadata tables
 #
-            for l in range (nresulttbl):
+            for i in range (nresulttbl):
            
-                fileurl = jsondata['results']['resulttbls'][l]['fileurl']
+                fileurl = jsondata['results']['resulttbls'][i]['fileurl']
         
                 if debug:
                     logging.debug ('')
@@ -2423,10 +2420,10 @@ class Archive:
                     logging.debug ('returned os.makedirs: pngsubdir') 
 
 
-            for l in range (ngraphtbl):
+            for i in range (ngraphtbl):
            
                 fileurl = \
-                    jsondata['results']['graphtbls'][l]['graphfileurl']
+                    jsondata['results']['graphtbls'][i]['graphfileurl']
         
                 if debug:
                     logging.debug ('')
@@ -2484,7 +2481,7 @@ class Archive:
                         logging.debug ('hrere0')
                         logging.debug (f'url_prefix= {url_prefix:s}') 
 
-                    nrecstr = jsondata['results']['graphtbls'][l]['nrec']
+                    nrecstr = jsondata['results']['graphtbls'][i]['nrec']
                     nrec_png = int(nrecstr)
 
                     if debug:
@@ -2495,7 +2492,7 @@ class Archive:
                     for ipng in range (nrec_png):
 
                         pngfile = \
-                            jsondata['results']['graphtbls'][l]['metadata'][ipng]['pngfile']
+                            jsondata['results']['graphtbls'][i]['metadata'][ipng]['pngfile']
                         
                         pngurl = url_prefix + '/' + pngfile
                         pngpath = pngsubdir + '/' + pngfile
@@ -2547,7 +2544,6 @@ class Archive:
 #{ Archive.__get_moss_resultfile
 #
         response = None
-        status = ''
         msg = ''
         
         debug = 0 
@@ -2574,14 +2570,13 @@ class Archive:
 
         except Exception as e:
            
-            status = 'error'
             msg = str(e)
 	    
             if debug:
                 logging.debug ('')
                 logging.debug (f'exception: e= {str(e):s}')
             
-            raise Exception (msg)    
+            raise Exception (msg)
      
        
 #
@@ -2811,7 +2806,7 @@ class Archive:
                 logging.basicConfig (filename=debugfname, \
                     level=logging.DEBUG)
     
-                with open (debugfname, 'w') as fdebug:
+                with open (debugfname, 'w'):
                     pass
 
 #
@@ -3008,7 +3003,7 @@ class Archive:
             return
         """
 
-        srow = 0;
+        srow = 0
         erow = len_tbl - 1
 
         if ('start_row' in kwargs): 
@@ -3155,22 +3150,22 @@ class Archive:
         print (f'Start downloading {nfile:d} koaid data you requested;')
         print (f'please check your outdir: {outdir:s} for  progress ....')
  
-        for l in range (srow, erow+1):
+        for row in range (srow, erow+1):
         #
         #{ for loop for download all files (lev0, lev1, calib)
         #
             if debug:
                 logging.debug ('')
-                logging.debug (f'l= {l:d}')
+                logging.debug (f'row= {row:d}')
                 logging.debug ('')
-                logging.debug ('astropytbl[l]= ')
-                logging.debug (astropytbl[l])
+                logging.debug ('astropytbl[row]= ')
+                logging.debug (astropytbl[row])
                 logging.debug ('instrument= ')
-                logging.debug (astropytbl[l][ind_instrume])
+                logging.debug (astropytbl[row][ind_instrume])
 
-            instrument = astropytbl[l][ind_instrume]
-            koaid = astropytbl[l][ind_koaid]
-            filehand = astropytbl[l][ind_filehand]
+            instrument = astropytbl[row][ind_instrume]
+            koaid = astropytbl[row][ind_koaid]
+            filehand = astropytbl[row][ind_filehand]
 	    
             if debug:
                 logging.debug ('')
@@ -3205,7 +3200,7 @@ class Archive:
   
             if debug:
                 logging.debug ('')
-                logging.debug (f'l= {l:d} koaid= {koaid:s}')
+                logging.debug (f'row= {row:d} koaid= {koaid:s}')
                 logging.debug (f'filehand= {filehand:s}')
                 logging.debug (f'instrument= {instrument:s}')
 
@@ -3258,7 +3253,7 @@ class Archive:
                     (instrument.lower() != "hires") and \
                     (instrument.lower() != "nirspec")):
                
-                    if (l == srow):
+                    if (row == srow):
                         print (f'Instrument [{instrument:s}] does not have level1 data.')
                 else:
                 #
@@ -3362,7 +3357,7 @@ class Archive:
                                 nlev1file = int(jsonData["result"]["nlev1file"])
                             fp.close() 
                             
-                        except Exception as e:
+                        except Exception:
         
                             if debug:
                                 logging.debug ('')
@@ -3382,7 +3377,7 @@ class Archive:
                     
                         if debug:
                             logging.debug ('')
-                            logging.debug (f'got here:')
+                            logging.debug ('got here:')
                             logging.debug (f'nlev1file= {nlev1file:d}')
   
                         msg = 'No level 1 data found for koaid: [' \
@@ -3417,7 +3412,7 @@ class Archive:
                     
                             if debug:
                                 logging.debug ('')
-                                logging.debug (f'returned __download_lev1files')
+                                logging.debug ('returned __download_lev1files')
                                 logging.debug (f'nlev1= {nlev1:d}')
                         
                             ndnloaded_lev1 = ndnloaded_lev1 + nlev1
@@ -3528,7 +3523,7 @@ class Archive:
                             logging.debug ('returned __submit_request')
                             logging.debug (f'msg= {msg:s}')
             
-                    except Exception as e:
+                    except Exception:
                         #print (f'File [{caliblist:s}] download: {str(e):s}')
                         #msg = 'Error downloading caliblist [' + \
                         #    caliblist + ']:' + str(e)
@@ -3567,7 +3562,7 @@ class Archive:
                             logging.debug ('returned __submit_request')
                             logging.debug (f'msg= {msg:s}')
             
-                    except Exception as e:
+                    except Exception:
                         #print (f'File [{caliblist:s}] download: {str(e):s}')
                         #msg = 'Error downloading caliblist_ipac [' + \
                         #    caliblist_ipac + ']:' + str(e)
@@ -3636,7 +3631,7 @@ class Archive:
             #
             
         #
-        #}        endfor l in range (srow, erow+1)
+        #}        endfor row in range (srow, erow+1)
         #
 
         if debug:
@@ -3689,7 +3684,7 @@ class Archive:
    
         if debug:
             logging.debug ('')
-            logging.debug (f'Enter __download_lev1files:')
+            logging.debug ('Enter __download_lev1files:')
             logging.debug (f'outdir_lev1= {outdir_lev1:s}')
 
 #
@@ -3723,7 +3718,7 @@ class Archive:
                     
         if debug:
             logging.debug ('')
-            logging.debug (f'data:')
+            logging.debug ('data:')
             logging.debug (data)
 
 
@@ -3835,16 +3830,16 @@ class Archive:
             url = ''
             d1 = int('0755', 8)
             nrec = 0
-            for l in range (nsubdir):
-            #for l in range (0, 1):
+            for subdir_idx in range (nsubdir):
+            #for subdir_idx in range (0, 1):
 
-                subdir = data[l]["subdir"] 
-                lev1files = data[l]["lev1files"] 
+                subdir = data[subdir_idx]["subdir"] 
+                lev1files = data[subdir_idx]["lev1files"] 
                 nrec = len (lev1files) 
               
                 if debug:
                     logging.debug ('')
-                    logging.debug (f'l= {l:d} subdir= {subdir:s}')
+                    logging.debug (f'subdir_idx= {subdir_idx:d} subdir= {subdir:s}')
                     logging.debug (f'nrec= {nrec:d}')
                     #logging.debug (f'lev1files=')
                     #logging.debug (lev1files)
@@ -3965,7 +3960,7 @@ class Archive:
                 jsonData = json.load (fp) 
                 data = jsonData["table"]
 
-        except Exception as e:
+        except Exception:
         
             if debug:
                 logging.debug ('')
@@ -3982,7 +3977,6 @@ class Archive:
 
         if (nrec == 0):
 
-            status = 'error'	
             errmsg = 'No data found in the caliblist: ' + listpath
 	    
             raise Exception (errmsg)
@@ -4074,7 +4068,7 @@ class Archive:
             logging.debug (f'url= {url:s}')
             logging.debug (f'filepath= {filepath:s}')
        
-            if not (cookiejar is None):  
+            if cookiejar is not None:  
             
                 for cookie in cookiejar:
                     
@@ -4451,7 +4445,7 @@ class objLookup:
 
             if self.debug:
                 logging.debug ('')
-                logging.debug (f'response:')
+                logging.debug ('response:')
                 logging.debug (self.response)
 
         except Exception as e:
@@ -4748,11 +4742,7 @@ class KoaTap:
             logging.debug (f'cookiepath= {self.cookiepath:s}')
             logging.debug (f'self.maxrec= {self.maxrec:d}')
 
-#
-#    turn on server debug
-#   
-        pid = os.getpid()
-        self.datadict['request'] = self.request              
+        self.datadict['request'] = self.request
         self.datadict['lang'] = self.lang              
         self.datadict['phase'] = self.phase              
         self.datadict['format'] = self.format              
@@ -4764,7 +4754,10 @@ class KoaTap:
                 logging.debug ('')
                 logging.debug (f'key= {key:s} val= {str(self.datadict[key]):s}')
     
-        self.datadict['debug'] = 1              
+#
+#    turn on server debug
+#
+        self.datadict['debug'] = 1
         
         self.cookiejar = http.cookiejar.MozillaCookieJar (self.cookiepath)
          
@@ -4776,7 +4769,7 @@ class KoaTap:
         if (len(self.cookiepath) > 0):
         
             try:
-                self.cookiejar.load (ignore_discard=True, ignore_expires=True);
+                self.cookiejar.load (ignore_discard=True, ignore_expires=True)
             
                 if self.debug:
                     logging.debug (
@@ -4789,7 +4782,7 @@ class KoaTap:
                         logging.debug (f'cookie.name= {cookie.name:s}')
                         logging.debug (f'cookie.value= {cookie.value:s}')
                         logging.debug (f'cookie.domain= {cookie.domain:s}')
-            except:
+            except Exception:
                 if self.debug:
                     logging.debug ('KoaTap: loadCookie exception')
  
@@ -5023,7 +5016,7 @@ class KoaTap:
         
             if debug:
                 logging.debug ('')
-                logging.debug (f'koajob instantiated')
+                logging.debug ('koajob instantiated')
                 logging.debug (f'phase= {self.koajob.phase:s}')
        
        
@@ -5307,7 +5300,6 @@ class KoaTap:
             logging.debug ('')
             logging.debug (f'content_type= {self.content_type:s}')
        
-        data = None
         self.status = ''
         self.msg = ''
         if (self.content_type == 'application/json'):
@@ -5315,7 +5307,7 @@ class KoaTap:
 #    error message
 #
             try:
-                data = self.response.json()
+                self.response.json()
             except Exception:
                 if debug:
                     logging.debug ('')
@@ -5729,7 +5721,7 @@ class KoaTap:
 
                 if debug:
                     logging.debug ('')
-                    logging.debug (f'returned koajob.get_result')
+                    logging.debug ('returned koajob.get_result')
         
             except Exception as e:
             
@@ -6536,7 +6528,7 @@ class KoaJob:
      
         if self.debug:
             logging.debug ('')
-            logging.debug (f'self.job= ')
+            logging.debug ('self.job= ')
             logging.debug (self.job)
 
 
