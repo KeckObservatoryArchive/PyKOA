@@ -36,3 +36,22 @@ jobs:
 
       - name: Run tests
         run: python -m pytest tests/test_send_sync.py
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install "ruff>=0.13.0,<0.14.0"
+
+      - name: Run ruff
+        run: ruff check .
