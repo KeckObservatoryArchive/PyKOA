@@ -1,0 +1,23 @@
+# Ruff configuration for PyKOA
+# https://docs.astral.sh/ruff/configuration/
+
+[lint]
+# Enforce pycodestyle errors (E) and pyflakes (F).
+# W (pycodestyle warnings: trailing whitespace, blank lines with whitespace)
+# is intentionally excluded — core.py has ~3,000 pre-existing W violations
+# that need a dedicated cleanup PR. Once clean, add "W" here.
+# Tracked in Todoist: "fix trailing whitespace and mixed tabs/spaces in core.py"
+select = ["E", "F"]
+
+# Ignored until the whitespace cleanup PR:
+# - E501: line too long — many long lines in the original codebase
+# - E101: indentation contains mixed spaces and tabs — ~256 occurrences
+ignore = ["E501", "E101"]
+
+# Excluded files:
+# - tests/test_koa.py: entirely commented-out legacy test file; all imports
+#   are unused. Will be cleaned up in the test_core.py PR.
+# - core.py (root): stray unpackaged 2022 copy of pykoa/koa/core.py.
+#   Not installed, not imported. Tracked for deletion in SUMMARY.md follow-up 6.
+exclude = ["tests/test_koa.py", "core.py"]
+extend-exclude = ["notebooks", "*.ipynb"]
