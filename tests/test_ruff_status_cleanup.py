@@ -44,7 +44,6 @@ import pytest
 
 from pykoa.koa.core import Archive
 
-
 SRC = pathlib.Path(__file__).parent.parent / 'pykoa' / 'koa' / 'core.py'
 
 

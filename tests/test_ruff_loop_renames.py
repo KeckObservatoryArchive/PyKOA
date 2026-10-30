@@ -19,7 +19,6 @@ from unittest import mock
 
 from pykoa.koa.core import Archive
 
-
 SRC = pathlib.Path(__file__).parent.parent / 'pykoa' / 'koa' / 'core.py'
 
 # ── Group A guard — confirm all 'as fdebug' bindings are gone ────────────────

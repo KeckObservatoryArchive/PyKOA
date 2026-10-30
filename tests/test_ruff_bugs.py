@@ -23,7 +23,6 @@ import pytest
 
 from pykoa.koa.core import Archive, KoaTap
 
-
 # ── Bug 3 — extract_xmlerr ────────────────────────────────────────────────────
 # This is the cleanest to unit-test: extract_xmlerr takes a plain string/bytes
 # and is directly accessible on KoaTap.
