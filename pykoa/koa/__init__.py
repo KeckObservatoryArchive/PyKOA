@@ -5,7 +5,7 @@ from astropy import config as _config
 
 
 class Conf (_config.ConfigNamespace):
-    
+
     """
     Configuration parameters for 'astroquery.koa'.
     """
@@ -15,7 +15,7 @@ class Conf (_config.ConfigNamespace):
 
     cgipgm = _config.ConfigItem (
         ['TAP'],
-        'alias location for TAP cgi program.') 
+        'alias location for TAP cgi program.')
 
     timeout = _config.ConfigItem (
         60,
@@ -26,6 +26,6 @@ conf = Conf()
 
 from .core import Koa, Archive, KoaTap, KoaJob  # noqa: E402 — must follow conf = Conf() to avoid circular import
 
-__all__ = ['Koa', 'Archive', 'KoaTap', 'KoaJob', 
+__all__ = ['Koa', 'Archive', 'KoaTap', 'KoaJob',
            'Conf', 'conf',
-           ] 
+           ]

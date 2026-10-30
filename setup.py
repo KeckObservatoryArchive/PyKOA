@@ -12,7 +12,7 @@ setup(
     version="1.7.2",
     author="Mihseh Kong",
     author_email="mihseh@ipac.caltech.edu",
-    description="KOA archive access client", 
+    description="KOA archive access client",
     long_description = long_description,
     url="https://github.com/KeckObservatoryArchive/PyKOA",
     classifiers=[
