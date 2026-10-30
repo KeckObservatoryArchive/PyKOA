@@ -50,8 +50,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install ruff
-        run: pip install "ruff>=0.13.0,<0.14.0"
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
 
       - name: Run ruff
         run: ruff check .
