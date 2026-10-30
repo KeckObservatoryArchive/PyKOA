@@ -159,22 +159,18 @@ def test_no_deubg_typo_at_download_calibfiles_callsite():
 def test_baseurl_trailing_slash_added_when_missing():
     """Archive adds trailing slash to server kwarg that lacks one.
 
-    Regression test: line 173 in core.py was 'self.baseurl + "/"' (no-op)
-    instead of 'self.baseurl += "/"'. If a user passes server='https://koa.ipac.caltech.edu'
-    (no trailing slash), all URL construction would silently break.
+    Regression test: Archive.__init__ had 'self.baseurl + "/"' (no-op string
+    concatenation, result discarded) instead of 'self.baseurl += "/"'.
+    If a user passes server='https://koa.ipac.caltech.edu' without a trailing
+    slash, all URL construction would silently break.
     """
-    from pykoa.koa.core import Archive
-
     a = Archive(server="https://koa.ipac.caltech.edu")
     assert a.baseurl.endswith("/"), f"baseurl must end with '/'; got {a.baseurl!r}"
 
 
 def test_baseurl_trailing_slash_preserved_when_present():
     """Archive does not double-slash a server kwarg that already ends with '/'."""
-    from pykoa.koa.core import Archive
-
     a = Archive(server="https://koa.ipac.caltech.edu/")
     assert a.baseurl == "https://koa.ipac.caltech.edu/", (
         f"baseurl should be unchanged; got {a.baseurl!r}"
     )
-    assert not a.baseurl.endswith("//"), "baseurl must not have double slash"
