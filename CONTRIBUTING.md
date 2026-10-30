@@ -25,9 +25,10 @@ cd PyKOA
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install --upgrade pip
-pip install -e .
-pip install pytest ruff
+pip install -e ".[dev]"
 ```
+
+This installs the package in editable mode along with all development dependencies (pytest, ruff, bandit, requests-mock).
 
 ## Running tests
 
