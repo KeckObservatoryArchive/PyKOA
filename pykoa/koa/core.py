@@ -170,7 +170,7 @@ class Archive:
 
         len_baseurl = len(self.baseurl)
         if self.baseurl[len_baseurl - 1] != "/":
-            self.baseurl + "/"
+            self.baseurl += "/"
 
         if self.debug:
             logging.debug("")
