@@ -121,19 +121,25 @@ class Archive:
 
     debugfname = "./koa.debug"
     debug = 0
+    timeout = (30, 300)
 
     def __init__(self, **kwargs):
         #
         # { Archive.init
         #
         """
-        'init' method initializes the class with optional debugfile flag.
+        'init' method initializes the class with optional keyword arguments.
 
         Optional inputs:
         ----------------
         debugfile: a file path for the debug output
+        timeout: request timeout in seconds passed to requests.get/post.
+            Can be a single number or a (connect, read) tuple.
+            Default is (30, 300).
 
         """
+
+        self.timeout = kwargs.get("timeout", (30, 300))
 
         if "debugfile" in kwargs:
             self.debug = 1
@@ -339,8 +345,9 @@ class Archive:
 
         response = None
         try:
-            response = session.get(url, cookies=cookiejar)
-
+            response = session.get(url, cookies=cookiejar, timeout=self.timeout)
+        except requests.Timeout:
+            raise
         except Exception as e:
             msg = "Failed to login: " + str(e)
             print(msg)
@@ -888,14 +895,16 @@ class Archive:
         lookup = None
         try:
             if debug:
-                lookup = objLookup(object, debug=1)
+                lookup = objLookup(object, debug=1, timeout=self.timeout)
             else:
-                lookup = objLookup(object)
+                lookup = objLookup(object, timeout=self.timeout)
 
             if debug:
                 logging.debug("")
                 logging.debug("objLookup run successful and returned")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             if debug:
                 logging.debug("")
@@ -1113,6 +1122,8 @@ class Archive:
                 logging.debug("")
                 logging.debug("returned __make_query")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             if debug:
                 logging.debug("")
@@ -1144,6 +1155,7 @@ class Archive:
                         maxrec=self.maxrec,
                         cookiefile=self.cookiepath,
                         debug=1,
+                        timeout=self.timeout,
                     )
 
                 except Exception as e:
@@ -1161,6 +1173,7 @@ class Archive:
                         format=self.format,
                         maxrec=self.maxrec,
                         cookiefile=self.cookiepath,
+                        timeout=self.timeout,
                     )
 
                 except Exception as e:
@@ -1175,7 +1188,7 @@ class Archive:
             if debug:
                 try:
                     self.tap = KoaTap(
-                        self.tap_url, format=self.format, maxrec=self.maxrec, debug=1
+                        self.tap_url, format=self.format, maxrec=self.maxrec, debug=1, timeout=self.timeout
                     )
 
                 except Exception as e:
@@ -1189,7 +1202,7 @@ class Archive:
             else:
                 try:
                     self.tap = KoaTap(
-                        self.tap_url, format=self.format, maxrec=self.maxrec
+                        self.tap_url, format=self.format, maxrec=self.maxrec, timeout=self.timeout
                     )
 
                 except Exception as e:
@@ -1404,6 +1417,7 @@ class Archive:
                     maxrec=self.maxrec,
                     cookiefile=self.cookiepath,
                     debug=1,
+                    timeout=self.timeout,
                 )
             else:
                 self.tap = KoaTap(
@@ -1411,11 +1425,12 @@ class Archive:
                     format=self.format,
                     maxrec=self.maxrec,
                     cookiefile=self.cookiepath,
+                    timeout=self.timeout,
                 )
         else:
             if debug:
                 self.tap = KoaTap(
-                    self.tap_url, format=self.format, maxrec=self.maxrec, debug=1
+                    self.tap_url, format=self.format, maxrec=self.maxrec, debug=1, timeout=self.timeout
                 )
 
                 # self.tap = KoaTap (self.tap_url, \
@@ -1429,6 +1444,7 @@ class Archive:
                     format=self.format,
                     propflag=self.propflag,
                     maxrec=self.maxrec,
+                    timeout=self.timeout,
                 )
 
         if debug:
@@ -1900,7 +1916,11 @@ class Archive:
         try:
             if cookiejar is not None:
                 response = requests.post(
-                    moss_url, data=param, cookies=cookiejar, allow_redirects=False
+                    moss_url,
+                    data=param,
+                    cookies=cookiejar,
+                    allow_redirects=False,
+                    timeout=self.timeout,
                 )
 
                 if debug:
@@ -1908,12 +1928,16 @@ class Archive:
                     logging.debug("request sent with cookiejar")
 
             else:
-                response = requests.post(moss_url, data=param, allow_redirects=False)
+                response = requests.post(
+                    moss_url, data=param, allow_redirects=False, timeout=self.timeout
+                )
 
                 if debug:
                     logging.debug("")
                     logging.debug("request sent without cookiejar")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             status = "error"
             msg = str(e)
@@ -2475,12 +2499,14 @@ class Archive:
         #   send resulturl to retrieve result table
         #
         try:
-            response = requests.get(resulturl, stream=True)
+            response = requests.get(resulturl, stream=True, timeout=self.timeout)
 
             if debug:
                 logging.debug("")
                 logging.debug("resulturl request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             msg = str(e)
 
@@ -2560,12 +2586,14 @@ class Archive:
         #
         response = None
         try:
-            response = requests.get(statusurl, stream=True)
+            response = requests.get(statusurl, stream=True, timeout=self.timeout)
 
             if debug:
                 logging.debug("")
                 logging.debug("statusurl request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             msg = str(e)
 
@@ -3973,10 +4001,8 @@ class Archive:
                         logging.debug(f"cookie.domain= {cookie.domain:s}")
 
         try:
-            self.response = requests.get(url, stream=True, cookies=cookiejar)
+            self.response = requests.get(url, stream=True, cookies=cookiejar, timeout=self.timeout)
 
-            # self.response =  requests.get (url, cookies=cookiejar, \
-            #    stream=True)
 
             if debug:
                 logging.debug("")
@@ -3989,6 +4015,8 @@ class Archive:
                 logging.debug("done")
                 logging.debug("")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             if debug:
                 logging.debug("")
@@ -3997,7 +4025,6 @@ class Archive:
             msg = "Failed to submit the request: " + str(e)
 
             raise Exception(msg)
-            return
 
         if debug:
             logging.debug("")
@@ -4196,12 +4223,14 @@ class Archive:
 
         response = None
         try:
-            response = requests.get(url, stream=True)
+            response = requests.get(url, stream=True, timeout=self.timeout)
 
             if debug:
                 logging.debug("")
                 logging.debug("request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             msg = "Error: " + str(e)
 
@@ -4300,6 +4329,7 @@ class objLookup:
     cdec2000 = ""
 
     debug = 0
+    timeout = (30, 300)
 
     def __init__(self, object, **kwargs):
         #
@@ -4307,6 +4337,8 @@ class objLookup:
         #
 
         self.object = object
+
+        self.timeout = kwargs.get("timeout", (30, 300))
 
         if "debug" in kwargs:
             self.debug = kwargs["debug"]
@@ -4319,13 +4351,15 @@ class objLookup:
 
         self.response = None
         try:
-            self.response = requests.get(self.url, stream=True)
+            self.response = requests.get(self.url, stream=True, timeout=self.timeout)
 
             if self.debug:
                 logging.debug("")
                 logging.debug("response:")
                 logging.debug(self.response)
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.msg = f"submit request exception: {str(e):s}"
             raise Exception(self.msg)
@@ -4572,6 +4606,8 @@ class KoaTap:
         self.koajob = None
         self.astropytbl = None
 
+        self.timeout = kwargs.get("timeout", (30, 300))
+
         if "debug" in kwargs:
             self.debug = kwargs.get("debug")
 
@@ -4726,16 +4762,19 @@ class KoaTap:
                     data=self.datadict,
                     cookies=self.cookiejar,
                     allow_redirects=False,
+                    timeout=self.timeout,
                 )
             else:
                 self.response = requests.post(
-                    url, data=self.datadict, allow_redirects=False
+                    url, data=self.datadict, allow_redirects=False, timeout=self.timeout
                 )
 
             if debug:
                 logging.debug("")
                 logging.debug("request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.status = "error"
             self.msg = str(e)
@@ -4868,15 +4907,17 @@ class KoaTap:
         #
         try:
             if debug:
-                self.koajob = KoaJob(self.statusurl, debug=1)
+                self.koajob = KoaJob(self.statusurl, debug=1, timeout=self.timeout)
             else:
-                self.koajob = KoaJob(self.statusurl)
+                self.koajob = KoaJob(self.statusurl, timeout=self.timeout)
 
             if debug:
                 logging.debug("")
                 logging.debug("koajob instantiated")
                 logging.debug(f"phase= {self.koajob.phase:s}")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.status = "error"
             self.msg = str(e)
@@ -4941,12 +4982,14 @@ class KoaTap:
         #   send resulturl to retrieve result table
         #
         try:
-            self.response_result = requests.get(self.resulturl, stream=True)
+            self.response_result = requests.get(self.resulturl, stream=True, timeout=self.timeout)
 
             if debug:
                 logging.debug("")
                 logging.debug("resulturl request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.status = "error"
             self.msg = str(e)
@@ -5089,16 +5132,19 @@ class KoaTap:
                     cookies=self.cookiejar,
                     allow_redirects=False,
                     stream=True,
+                    timeout=self.timeout,
                 )
             else:
                 self.response = requests.post(
-                    url, data=self.datadict, allow_redirects=False, stream=True
+                    url, data=self.datadict, allow_redirects=False, stream=True, timeout=self.timeout
                 )
 
             if debug:
                 logging.debug("")
                 logging.debug("request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.status = "error"
             self.msg = str(e)
@@ -5625,6 +5671,8 @@ class KoaJob:
         self.parameters = ""
         self.resulturl = ""
 
+        self.timeout = kwargs.get("timeout", (30, 300))
+
         if "debug" in kwargs:
             self.debug = kwargs.get("debug")
 
@@ -5639,6 +5687,8 @@ class KoaJob:
                 logging.debug("")
                 logging.debug("returned __get_statusjob")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.status = "error"
             self.msg = str(e)
@@ -5679,6 +5729,8 @@ class KoaJob:
                     logging.debug("job= ")
                     logging.debug(self.job)
 
+            except requests.Timeout:
+                raise
             except Exception as e:
                 self.status = "error"
                 self.msg = str(e)
@@ -5715,6 +5767,8 @@ class KoaJob:
                     logging.debug("job= ")
                     logging.debug(self.job)
 
+            except requests.Timeout:
+                raise
             except Exception as e:
                 self.status = "error"
                 self.msg = str(e)
@@ -5756,6 +5810,8 @@ class KoaJob:
                     logging.debug("returned __get_statusjob")
                     logging.debug(f"resulturl= {self.resulturl:s}")
 
+            except requests.Timeout:
+                raise
             except Exception as e:
                 self.status = "error"
                 self.msg = str(e)
@@ -5775,12 +5831,14 @@ class KoaJob:
         #   send resulturl to retrieve result table
         #
         try:
-            response = requests.get(self.resulturl, stream=True)
+            response = requests.get(self.resulturl, stream=True, timeout=self.timeout)
 
             if self.debug:
                 logging.debug("")
                 logging.debug("resulturl request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.status = "error"
             self.msg = str(e)
@@ -5859,6 +5917,8 @@ class KoaJob:
                     logging.debug("job= ")
                     logging.debug(self.job)
 
+            except requests.Timeout:
+                raise
             except Exception as e:
                 self.status = "error"
                 self.msg = str(e)
@@ -6148,12 +6208,14 @@ class KoaJob:
         #   self.status doesn't exist, call get_status
         #
         try:
-            self.response = requests.get(self.statusurl, stream=True)
+            self.response = requests.get(self.statusurl, stream=True, timeout=self.timeout)
 
             if self.debug:
                 logging.debug("")
                 logging.debug("statusurl request sent")
 
+        except requests.Timeout:
+            raise
         except Exception as e:
             self.msg = str(e)
 
