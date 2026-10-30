@@ -1,4 +1,6 @@
 [![Tests](https://github.com/KeckObservatoryArchive/PyKOA/actions/workflows/tests.yml/badge.svg)](https://github.com/KeckObservatoryArchive/PyKOA/actions/workflows/tests.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Python](https://img.shields.io/pypi/pyversions/pykoa)](https://pypi.org/project/pykoa/)
 
 KOA Table Access Protocol (TAP) Client
 ======================================
