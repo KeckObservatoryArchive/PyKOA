@@ -8,8 +8,8 @@
 exclude = ["tests/test_koa.py", "core.py", "notebooks"]
 
 [lint]
-# Enforce pycodestyle errors/warnings (E/W) and pyflakes (F).
-select = ["E", "F", "W"]
+# Enforce pycodestyle errors/warnings (E/W), pyflakes (F), and isort (I).
+select = ["E", "F", "W", "I"]
 
 # Ignored:
 # - E501 (line too long): core.py has many lines over 88 chars from the original

@@ -25,6 +25,7 @@ Fix 4 — `# noqa: E402` on `__init__.py:27` (E402)
 """
 
 import pathlib
+
 import pytest
 
 from pykoa.koa.core import KoaTap
@@ -194,7 +195,8 @@ def test_deferred_import_still_after_conf_instantiation():
 def test_package_still_importable():
     """After all Group D fixes, pykoa must still import cleanly."""
     import importlib
+
     import pykoa.koa
     importlib.reload(pykoa.koa)
-    from pykoa.koa import Koa, Archive, KoaTap, KoaJob, conf
+    from pykoa.koa import Archive, Koa, KoaJob, KoaTap, conf
     assert all([Koa, Archive, KoaTap, KoaJob, conf])
