@@ -5255,8 +5255,8 @@ class KoaTap:
                 self.response = requests.post (url, data= self.datadict, \
                     cookies=self.cookiejar, allow_redirects=False, stream=True)
             else: 
-                self.response = requesrs.post (url, data= self.datadict, \
-                    allow_redicts=False, stream=True)
+                self.response = requests.post (url, data= self.datadict, \
+                    allow_redirects=False, stream=True)
 
             if debug:
                 logging.debug ('')
@@ -5274,11 +5274,39 @@ class KoaTap:
             return (self.msg)
 
 #
-#    re-direct case not implemented for send_sync
+#    non-200 (including redirects, which are not followed): return the server's
+#    error message. For format=votable KOA sends a QUERY_STATUS=ERROR VOTable;
+#    for other formats it sends text/plain. Nothing is saved and the response
+#    is released.
 #
-#	if (self.response.status_code == 303):
-#            self.resulturl = self.response.headers['Location']
-        
+        if (self.response.status_code != 200):
+
+            errmsg = ''
+            content_type = self.response.headers.get('Content-type', '').lower()
+            try:
+                if ('xml' in content_type):
+                    errmsg = self.extract_xmlerr (self.response.content)
+                elif ('text/plain' in content_type):
+                    errmsg = self.response.text.strip()
+            except Exception as e:
+                if debug:
+                    logging.debug ('')
+                    logging.debug (f'error body parse failed: {str(e):s}')
+
+            self.status = 'error'
+            if (len(errmsg) > 0):
+                self.msg = errmsg
+            else:
+                self.msg = \
+                    f'Request failed with HTTP status {self.response.status_code:d}.'
+
+            try:
+                self.response.close()
+            except Exception:
+                pass
+
+            return (self.msg)
+
         self.content_type = self.response.headers['Content-type']
         self.encoding = self.response.encoding
 
@@ -5324,6 +5352,7 @@ class KoaTap:
             logging.debug ('')
             logging.debug ('got here')
 
+        self.response_result = self.response  # save_data streams response_result; set it from the sync POST response
         self.msg = self.save_data (self.outpath)
             
         if debug:
@@ -5569,9 +5598,17 @@ class KoaTap:
             self.msg = 'Result downloaded to file [' + self.outpath + ']'
         else:
 #
-#    read temp outpath to astropy table
+#    read temp file into astropy table; translate TAP format name to the
+#    astropy reader name (mirrors Archive.download at core.py:2891).
 #
-            self.astropytbl = Table.read (fpath, format='votable')	    
+            fmt_astropy = self.format
+            if (self.format == 'tsv'):
+                fmt_astropy = 'ascii.tab'
+            if (self.format == 'csv'):
+                fmt_astropy = 'ascii.csv'
+            if (self.format == 'ipac'):
+                fmt_astropy = 'ascii.ipac'
+            self.astropytbl = Table.read (fpath, format=fmt_astropy)
             self.msg = 'Result saved in memory (astropy table).'
       
         if debug:
