@@ -44,7 +44,7 @@ import pytest
 
 from pykoa.koa.core import Archive
 
-SRC = pathlib.Path(__file__).parent.parent / 'pykoa' / 'koa' / 'core.py'
+SRC = pathlib.Path(__file__).parent.parent / "pykoa" / "koa" / "core.py"
 
 
 def _method_source(method_name):
@@ -59,16 +59,17 @@ def _method_source(method_name):
     in_method = False
     method_lines = []
     for line in src:
-        if f'def {method_name}' in line:
+        if f"def {method_name}" in line:
             in_method = True
-        elif in_method and line.strip().startswith('def '):
+        elif in_method and line.strip().startswith("def "):
             break
         if in_method:
             method_lines.append(line)
-    return '\n'.join(method_lines)
+    return "\n".join(method_lines)
 
 
 # ── Static guards: confirm the dead assignments are gone ──────────────────────
+
 
 def test_status_error_removed_from_get_moss_resultfile():
     """__get_moss_resultfile must not have a dead local `status = 'error'`.
@@ -78,7 +79,7 @@ def test_status_error_removed_from_get_moss_resultfile():
     the raise exits the function before anyone can read it.
     The correct signal to callers is the raised Exception itself.
     """
-    method_src = _method_source('__get_moss_resultfile')
+    method_src = _method_source("__get_moss_resultfile")
     assert "status = 'error'" not in method_src, (
         "__get_moss_resultfile still has 'status = \"error\"' — "
         "this is dead code. The method signals errors by raising Exception. "
@@ -97,7 +98,7 @@ def test_status_error_removed_from_download_calibfiles():
     The local `status = 'error'` set just before the raise is never read —
     the raise exits the function. The caller receives the Exception, not status.
     """
-    method_src = _method_source('__download_calibfiles')
+    method_src = _method_source("__download_calibfiles")
     assert "status = 'error'" not in method_src, (
         "__download_calibfiles still has 'status = \"error\"' before a raise — "
         "this is dead code. The raise already signals the error. Remove it."
@@ -105,6 +106,7 @@ def test_status_error_removed_from_download_calibfiles():
 
 
 # ── Behavioural: Exception is raised with the right message ───────────────────
+
 
 def test_get_moss_resultfile_network_failure_raises_correct_message():
     """When the network call fails, __get_moss_resultfile must raise an Exception
@@ -115,12 +117,12 @@ def test_get_moss_resultfile_network_failure_raises_correct_message():
     """
     archive = Archive()
 
-    with mock.patch('pykoa.koa.core.requests.get',
-                    side_effect=ConnectionError('connection refused')):
-        with pytest.raises(Exception, match='connection refused'):
+    with mock.patch(
+        "pykoa.koa.core.requests.get", side_effect=ConnectionError("connection refused")
+    ):
+        with pytest.raises(Exception, match="connection refused"):
             archive._Archive__get_moss_resultfile(
-                'https://koa.ipac.caltech.edu/fake/result.tbl',
-                '/tmp/out.tbl'
+                "https://koa.ipac.caltech.edu/fake/result.tbl", "/tmp/out.tbl"
             )
 
 
@@ -132,17 +134,17 @@ def test_get_moss_resultfile_does_not_set_self_status_on_failure():
     not the Archive private helper pattern. Confirm the design is correct.
     """
     archive = Archive()
-    status_before = getattr(archive, 'status', 'NOT_SET')
+    status_before = getattr(archive, "status", "NOT_SET")
 
-    with mock.patch('pykoa.koa.core.requests.get',
-                    side_effect=ConnectionError('connection refused')):
+    with mock.patch(
+        "pykoa.koa.core.requests.get", side_effect=ConnectionError("connection refused")
+    ):
         with pytest.raises(Exception):
             archive._Archive__get_moss_resultfile(
-                'https://koa.ipac.caltech.edu/fake/result.tbl',
-                '/tmp/out.tbl'
+                "https://koa.ipac.caltech.edu/fake/result.tbl", "/tmp/out.tbl"
             )
 
-    status_after = getattr(archive, 'status', 'NOT_SET')
+    status_after = getattr(archive, "status", "NOT_SET")
     assert status_after == status_before, (
         f"__get_moss_resultfile set self.status='{status_after}' on failure. "
         "This method signals errors by raising, not by setting self.status. "
@@ -158,11 +160,9 @@ def test_download_calibfiles_empty_list_raises_correct_message(tmp_path):
     break the error. The raise is the error signal — status was just dead code.
     """
     archive = Archive()
-    caliblist = {'table': []}
-    listpath = tmp_path / 'caliblist.json'
+    caliblist = {"table": []}
+    listpath = tmp_path / "caliblist.json"
     listpath.write_text(json.dumps(caliblist))
 
-    with pytest.raises(Exception, match='No data found in the caliblist'):
-        archive._Archive__download_calibfiles(
-            str(listpath), None, str(tmp_path)
-        )
+    with pytest.raises(Exception, match="No data found in the caliblist"):
+        archive._Archive__download_calibfiles(str(listpath), None, str(tmp_path))
