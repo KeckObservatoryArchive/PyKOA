@@ -785,8 +785,8 @@ class Archive:
 
             instrument: HIRES
 
-            object (string): an object name resolvable by SIMBAD, NED, and
-                ExoPlanet's name_resolve;
+            object (string): an object name resolvable by SIMBAD or NED
+                via KOA's name resolver;
 
             This method resolves the object name into coordiates to be used as the
         center of the circle position search with default radius of 0.5 deg.
@@ -904,6 +904,12 @@ class Archive:
                 logging.debug("objLookup run successful and returned")
 
         except requests.Timeout:
+            print(
+                f"Object name lookup for [{object}] timed out. "
+                "The name resolver (SIMBAD/NED) may be temporarily unavailable. "
+                "Try query_position() with known coordinates, or pass coordinates "
+                "directly as 'RA Dec' (e.g. '279.23 38.78')."
+            )
             raise
         except Exception as e:
             if debug:
@@ -914,8 +920,12 @@ class Archive:
             return
 
         if lookup.status == "error":
-            msg = "Input object [" + object + "] lookup error: " + lookup.msg
-
+            msg = (
+                f"Input object [{object}] lookup error: {lookup.msg} "
+                "If the name resolver is unavailable, try query_position() with "
+                "known coordinates, or pass coordinates directly as 'RA Dec' "
+                "(e.g. '279.23 38.78')."
+            )
             print(msg)
             return
 
@@ -4299,18 +4309,22 @@ class objLookup:
     # { objLookup class
     #
     """
-    objLookup wraps ExoPlanet's web name resolver into a python class;
-    the exoLookup checks the exoplanet archive database and if that fails
-    it checks with the Sesame web service at CDS.  Sesame checks the CDS
-    database and if that fails it checks NED.  So this class covers
-    SIMBAD, NED, and ExoPlanet search.
+    objLookup resolves an object name to RA/Dec coordinates via KOA's
+    name resolver at conf.server + 'cgi-bin/Lookup/nph-lookup'.
+
+    The KOA resolver cascades through external services internally:
+    1. Sesame/CDS (covers SIMBAD)
+    2. NED
+
+    If those services are unavailable, the resolver returns an error.
+    Use query_position() with known coordinates as an alternative.
 
     Required input:
 
         object (char):  object name to be resolved
     """
 
-    lookupurl = "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?"
+    lookupurl = ""
     msg = ""
     status = ""
 
@@ -4338,6 +4352,7 @@ class objLookup:
 
         self.object = object
 
+        self.lookupurl = conf.server + "cgi-bin/Lookup/nph-lookup?"
         self.timeout = kwargs.get("timeout", (30, 300))
 
         if "debug" in kwargs:

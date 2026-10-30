@@ -272,9 +272,7 @@ def test_koatap_send_async_passes_timeout_to_koajob():
 # objLookup timeout configuration — tested via requests_mock (live call in __init__)
 # ---------------------------------------------------------------------------
 
-LOOKUP_URL = (
-    "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?location=Vega"
-)
+LOOKUP_URL = "https://koa.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?location=Vega"
 LOOKUP_OK_JSON = '{"stat": "OK", "source": "SIMBAD", "objname": "Vega", "objtype": "Star", "parsename": "Vega", "objdesc": "", "ra2000": "279.23473", "dec2000": "38.78369", "cra2000": "18:36:56.34", "cdec2000": "+38:47:01.3"}'
 
 
@@ -348,6 +346,45 @@ def test_objlookup_timeout_raises():
         m.get(LOOKUP_URL, exc=requests.Timeout("timed out"))
         with pytest.raises(requests.Timeout):
             objLookup("Vega")
+
+
+def test_objlookup_lookupurl_uses_conf_server():
+    """objLookup.lookupurl is built from conf.server, not a hardcoded URL."""
+    from pykoa.koa import conf
+    from pykoa.koa.core import objLookup
+
+    with req_mock.Mocker() as m:
+        m.get(
+            req_mock.ANY,
+            text=LOOKUP_OK_JSON,
+            headers={"Content-type": "application/json"},
+        )
+        obj = objLookup("Vega")
+
+    assert obj.lookupurl == conf.server + "cgi-bin/Lookup/nph-lookup?", (
+        "objLookup.lookupurl must be built from conf.server"
+    )
+
+
+def test_objlookup_lookupurl_not_exoplanet():
+    """objLookup must not use the ExoPlanet Archive URL for name resolution.
+
+    Regression test: the original code hardcoded exoplanetarchive.ipac.caltech.edu.
+    KOA has its own resolver at conf.server that should be used instead.
+    """
+    from pykoa.koa.core import objLookup
+
+    with req_mock.Mocker() as m:
+        m.get(
+            req_mock.ANY,
+            text=LOOKUP_OK_JSON,
+            headers={"Content-type": "application/json"},
+        )
+        obj = objLookup("Vega")
+
+    assert "exoplanetarchive" not in obj.lookupurl, (
+        "objLookup must use KOA resolver, not ExoPlanet Archive"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -485,7 +522,7 @@ def test_archive_query_object_passes_timeout_to_objlookup():
         captured["timeout"] = kwargs.get("timeout")
         original_init(self, object, **kwargs)
 
-    lookup_url = "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?location=Vega"
+    lookup_url = "https://koa.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?location=Vega"
     with req_mock.Mocker() as m:
         m.get(
             lookup_url,
@@ -513,7 +550,7 @@ def test_archive_query_object_timeout_raises():
     """A requests.Timeout from objLookup propagates out of Archive.query_object."""
 
     a = Archive(timeout=(5, 10))
-    lookup_url = "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?location=Vega"
+    lookup_url = "https://koa.ipac.caltech.edu/cgi-bin/Lookup/nph-lookup?location=Vega"
 
     with req_mock.Mocker() as m:
         m.get(lookup_url, exc=requests.Timeout("timed out"))
