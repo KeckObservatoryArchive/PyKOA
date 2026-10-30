@@ -1,2 +1,0 @@
-pykoa
-pykoa/koa
