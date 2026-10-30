@@ -17,7 +17,7 @@ Browse [open issues](https://github.com/KeckObservatoryArchive/PyKOA/issues) to 
 
 ## Development setup
 
-Python 3.11 or later is required.
+Python 3.11 or later is required. CI runs on Python 3.11, 3.12, and 3.13; you only need to test locally on one version.
 
 ```sh
 git clone https://github.com/KeckObservatoryArchive/PyKOA.git
@@ -43,11 +43,12 @@ Bug fixes and new features should include a test. Add tests to the relevant file
 
 ## Code style
 
-Ruff is used for linting and import ordering. Before opening a PR:
+Ruff is used for linting, import ordering, and formatting. Before opening a PR:
 
 ```sh
 ruff check .          # check for violations
 ruff check . --fix    # auto-fix what can be fixed
+ruff format .         # format code
 ```
 
 All violations must be resolved. Ruff is enforced in CI:
@@ -58,7 +59,7 @@ https://github.com/KeckObservatoryArchive/PyKOA/actions/workflows/tests.yml
 Use [NumPy docstring format](https://numpydoc.readthedocs.io/en/latest/format.html):
 
 ```python
-def query(self, sql, outpath, format='ipac'):
+def query(self, sql, outpath, format="ipac"):
     """
     Submit a SQL query to the KOA TAP service.
 
@@ -86,7 +87,7 @@ def query(self, sql, outpath, format='ipac'):
 
 External contributors should fork the repository first. Then:
 
-1. Create a branch off `main` using a prefix CI recognises: `fix/`, `feature/`, or `ci/`
+1. Create a branch off `main`. Use a prefix to match CI push triggers: `fix/`, `feature/`, or `ci/`. CI also runs on all PRs targeting `main` regardless of branch name.
 2. Make your changes
 3. Run the tests and ruff check
 4. Open a PR against `main`
