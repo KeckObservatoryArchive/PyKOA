@@ -1,0 +1,31 @@
+name: e2e
+
+on:
+  schedule:
+    # Nightly at 18:00 UTC (08:00 HST -- mid-morning Hawaii, off-peak for KOA operations and ingestion)
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+# Read-only — tests only check out code and query KOA
+permissions:
+  contents: read
+
+jobs:
+  public:
+    name: Public e2e tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Install package and dependencies
+        run: pip install -e "." -r requirements-dev.txt
+
+      - name: Run public e2e tests
+        run: pytest tests/test_e2e.py tests/test_e2e_instruments.py tests/test_e2e_resolvers.py -m e2e -v --timeout=120
