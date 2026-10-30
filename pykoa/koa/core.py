@@ -1936,7 +1936,7 @@ class Archive:
             os.makedirs (outdir, mode=d1, exist_ok=True)
         
         except Exception as e:
-            print (msg)
+            print (str(e))
             return
         
         if debug:
@@ -3607,7 +3607,7 @@ class Archive:
                         #    caliblist, cookiejar, outdir_calib)
                         
                         ncalibs = self.__download_calibfiles ( \
-                            caliblist, cookiejar, outdir_calib, deubg=1)
+                            caliblist, cookiejar, outdir_calib, debug=1)
                         ndnloaded_calib = ndnloaded_calib + ncalibs
                 
                         if debug:
@@ -3965,22 +3965,15 @@ class Archive:
                 jsonData = json.load (fp) 
                 data = jsonData["table"]
 
-            fp.close() 
-
         except Exception as e:
         
             if debug:
                 logging.debug ('')
-                logging.debug (f'caliblist: {caliblist:s} load error')
+                logging.debug (f'caliblist: {listpath:s} load error')
 
             errmsg = 'Failed to read ' + listpath	
 	
-            fp.close() 
-            
             raise Exception (errmsg)
-
-            return
-
         nrec = len(data)
     
         if debug:
@@ -5451,7 +5444,7 @@ class KoaTap:
 	    
             if self.debug:
                 logging.debug ('')
-                logging.debug (f'exception: e= {str(e):s}')
+                logging.debug (f'self.msg= {self.msg:s}')
             
             raise Exception (self.msg)    
      
