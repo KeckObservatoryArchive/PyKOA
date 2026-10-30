@@ -49,7 +49,7 @@ include = ["pykoa*"]
 # - tests/test_koa.py: entirely commented-out legacy test file
 # - core.py (root): stray unpackaged 2022 copy of pykoa/koa/core.py
 # - notebooks/: dev scratch, not part of the package
-exclude = ["tests/test_koa.py", "core.py", "notebooks"]
+exclude = ["tests/test_koa.py", "core.py", "notebooks", "*.md"]
 
 [tool.ruff.lint]
 # Enforce pycodestyle errors/warnings (E/W), pyflakes (F), and isort (I).
