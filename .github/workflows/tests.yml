@@ -35,7 +35,7 @@ jobs:
         run: pip install -e "." pytest
 
       - name: Run tests
-        run: python -m pytest tests/test_send_sync.py
+        run: python -m pytest tests/
 
   lint:
     name: ruff
