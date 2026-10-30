@@ -166,6 +166,43 @@ Koa.query_datetime(
 
 ## Configuration
 
+### Timeout
+
+All requests use a default timeout of `(30, 300)` -- 30 seconds to connect, 300 seconds to read. This can be changed at instantiation:
+
+```python
+from pykoa.koa import Archive
+
+# Default -- 30s connect, 300s read
+koa = Archive()
+
+# Custom connect and read timeouts
+koa = Archive(timeout=(30, 600))
+
+# Single value applies to both connect and read
+koa = Archive(timeout=120)
+
+# No timeout -- wait indefinitely (useful for very large queries or slow connections)
+koa = Archive(timeout=None)
+```
+
+The default `Koa` object is a shared `Archive()` instance. To use a custom timeout, create your own instance and call methods on it directly:
+
+```python
+koa = Archive(timeout=(30, 600))
+koa.query_datetime('hires', '2020-01-01 00:00:00/2020-12-31 23:59:59', 'results.tbl')
+```
+
+If the server does not respond within the connect timeout, or the response takes longer than the read timeout, a `requests.Timeout` exception is raised.
+
+### Debug logging
+
+```python
+koa = Archive(debugfile='koa.log')
+```
+
+Writes detailed request and response information to `koa.log`.
+
 ## Notebooks and Documentation
 
 Jupyter notebooks for each instrument and use case are available on the [KOA User Guide](https://koa.ipac.caltech.edu/UserGuide/PyKOA/TAPClients.html).
