@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
@@ -29,7 +33,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: setup.py
+          cache-dependency-path: |
+            setup.py
+            requirements-dev.txt
 
       - name: Install package and dependencies
         run: pip install -e "." -r requirements-dev.txt
