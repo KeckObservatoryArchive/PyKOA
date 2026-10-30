@@ -34,6 +34,7 @@ Homepage = "https://github.com/KeckObservatoryArchive/PyKOA"
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0,<9.0.0",
+    "pytest-cov>=6.0.0,<7.0.0",
     "pytest-timeout>=2.4.0,<3.0.0",
     "bandit>=1.9.4,<2.0.0",
     "requests-mock>=1.12.0,<2.0.0",
