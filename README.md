@@ -20,9 +20,13 @@ Moving objects are supported via the MOSS service.
 
 ## Installation
 
+Install the latest version directly from GitHub:
+
+```sh
+pip install git+https://github.com/KeckObservatoryArchive/PyKOA.git
 ```
-pip install pykoa
-```
+
+> **Note:** The PyPI package (`pip install pykoa`) is outdated and does not include recent bug fixes. Install from GitHub for the latest version.
 
 Requires Python 3.11+.
 
