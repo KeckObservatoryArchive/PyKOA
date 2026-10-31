@@ -1224,7 +1224,11 @@ class Archive:
             if debug:
                 try:
                     self.tap = KoaTap(
-                        self.tap_url, format=self.format, maxrec=self.maxrec, debug=1, timeout=self.timeout
+                        self.tap_url,
+                        format=self.format,
+                        maxrec=self.maxrec,
+                        debug=1,
+                        timeout=self.timeout,
                     )
 
                 except Exception as e:
@@ -1238,7 +1242,10 @@ class Archive:
             else:
                 try:
                     self.tap = KoaTap(
-                        self.tap_url, format=self.format, maxrec=self.maxrec, timeout=self.timeout
+                        self.tap_url,
+                        format=self.format,
+                        maxrec=self.maxrec,
+                        timeout=self.timeout,
                     )
 
                 except Exception as e:
@@ -1466,7 +1473,11 @@ class Archive:
         else:
             if debug:
                 self.tap = KoaTap(
-                    self.tap_url, format=self.format, maxrec=self.maxrec, debug=1, timeout=self.timeout
+                    self.tap_url,
+                    format=self.format,
+                    maxrec=self.maxrec,
+                    debug=1,
+                    timeout=self.timeout,
                 )
 
                 # self.tap = KoaTap (self.tap_url, \
@@ -4037,8 +4048,9 @@ class Archive:
                         logging.debug(f"cookie.domain= {cookie.domain:s}")
 
         try:
-            self.response = requests.get(url, stream=True, cookies=cookiejar, timeout=self.timeout)
-
+            self.response = requests.get(
+                url, stream=True, cookies=cookiejar, timeout=self.timeout
+            )
 
             if debug:
                 logging.debug("")
@@ -5023,7 +5035,9 @@ class KoaTap:
         #   send resulturl to retrieve result table
         #
         try:
-            self.response_result = requests.get(self.resulturl, stream=True, timeout=self.timeout)
+            self.response_result = requests.get(
+                self.resulturl, stream=True, timeout=self.timeout
+            )
 
             if debug:
                 logging.debug("")
@@ -5177,7 +5191,11 @@ class KoaTap:
                 )
             else:
                 self.response = requests.post(
-                    url, data=self.datadict, allow_redirects=False, stream=True, timeout=self.timeout
+                    url,
+                    data=self.datadict,
+                    allow_redirects=False,
+                    stream=True,
+                    timeout=self.timeout,
                 )
 
             if debug:
@@ -6249,7 +6267,9 @@ class KoaJob:
         #   self.status doesn't exist, call get_status
         #
         try:
-            self.response = requests.get(self.statusurl, stream=True, timeout=self.timeout)
+            self.response = requests.get(
+                self.statusurl, stream=True, timeout=self.timeout
+            )
 
             if self.debug:
                 logging.debug("")

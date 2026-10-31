@@ -36,10 +36,12 @@ def _fake_save(cookiepath):
     O_TRUNC, 0o600) internally, so the file is created or truncated at 0o600.
     This closure replicates that behavior faithfully.
     """
+
     def fake_save():
         fd = os.open(cookiepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w") as f:
             f.write("# Netscape HTTP Cookie File\n")
+
     return fake_save
 
 
@@ -90,9 +92,7 @@ def test_re_login_existing_insecure_cookie_is_tightened():
             f"Cookie file must be 0o600 after re-login, "
             f"got 0o{permissions:03o}. Belt-and-suspenders os.chmod failed."
         )
-        assert a.cookie_loaded == 1, (
-            "cookie_loaded must be 1 after successful login"
-        )
+        assert a.cookie_loaded == 1, "cookie_loaded must be 1 after successful login"
 
 
 def test_first_login_new_cookie_file_created_at_0o600():
@@ -169,9 +169,7 @@ def test_chmod_failure_removes_cookie_and_clears_flag(capsys):
                 ):
                     a.login(cookiepath=cookiepath, userid="test", password="test")
 
-        assert a.cookie_loaded == 0, (
-            "cookie_loaded must remain 0 when chmod fails"
-        )
+        assert a.cookie_loaded == 0, "cookie_loaded must remain 0 when chmod fails"
         assert not os.path.exists(cookiepath), (
             "Cookie file must be removed when chmod fails to prevent "
             "reading at unsafe permissions."
@@ -256,7 +254,9 @@ def test_chmod_and_remove_both_fail_logs_and_clears_flag(capsys):
                                 for call in mock_warn.call_args_list
                                 for arg in call[0]
                             ).lower()
-                            assert "remove" in all_warnings or "manual" in all_warnings, (
+                            assert (
+                                "remove" in all_warnings or "manual" in all_warnings
+                            ), (
                                 "Second warning must mention removal failure or manual action"
                             )
 
