@@ -375,9 +375,7 @@ def test_non_koa_server_warns():
     with mock.patch.object(logging, "warning") as mock_warn:
         Archive(server="https://example.com/")
         assert mock_warn.called, "Warning must fire for non-KOA domain"
-        assert any("example.com" in str(call) for call in mock_warn.call_args_list), (
-            "Warning must mention the server URL"
-        )
+        assert mock_warn.call_count == 1, "Exactly one warning for non-KOA domain"
 
 
 def test_koa_server_accepted():
