@@ -107,7 +107,9 @@ def test_submit_request_403_votable_body_returns_specific_error(archive, outfile
         with pytest.raises(Exception) as exc_info:
             submit(archive, DOWNLOAD_URL, outfile)
 
-    assert "koa_bad" in str(exc_info.value), "VOTable error text must appear in the exception"
+    assert "koa_bad" in str(exc_info.value), (
+        "VOTable error text must appear in the exception"
+    )
     assert "access denied" in str(exc_info.value).lower()
     assert not os.path.exists(outfile)
 
@@ -139,7 +141,9 @@ def test_submit_request_400_votable_body_returns_specific_error(archive, outfile
         with pytest.raises(Exception) as exc_info:
             submit(archive, DOWNLOAD_URL, outfile)
 
-    assert "koa_bad" in str(exc_info.value), "VOTable error text must appear in the exception"
+    assert "koa_bad" in str(exc_info.value), (
+        "VOTable error text must appear in the exception"
+    )
     assert "bad request" in str(exc_info.value).lower()
     assert not os.path.exists(outfile)
 

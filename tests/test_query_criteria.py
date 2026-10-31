@@ -56,11 +56,13 @@ def outfile(tmp_path):
 
 def make_send_async_stub(content=VOTABLE_BYTES, retmsg=None):
     """Return a send_async stub that writes content to the SUT-supplied outpath."""
+
     def stub(self, query, outpath=None, **kwargs):
         if outpath:
             with open(outpath, "wb") as f:
                 f.write(content)
         return retmsg or f"Result downloaded to file {outpath}"
+
     return stub
 
 
@@ -79,8 +81,6 @@ def test_query_criteria_happy_path_no_cookie(outfile):
 
     with open(outfile, "rb") as f:
         assert f.read() == VOTABLE_BYTES
-
-
 
 
 # ---------------------------------------------------------------------------

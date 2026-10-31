@@ -49,8 +49,11 @@ LOOKUP_ERROR_JSON = json.dumps(
 def test_objlookup_ok_populates_coordinates():
     """stat=OK response populates ra2000 and dec2000."""
     with req_mock.Mocker() as m:
-        m.get(req_mock.ANY, text=LOOKUP_OK_JSON,
-              headers={"Content-type": "application/json"})
+        m.get(
+            req_mock.ANY,
+            text=LOOKUP_OK_JSON,
+            headers={"Content-type": "application/json"},
+        )
         obj = objLookup("Vega")
 
     assert obj.status == "OK"
@@ -61,8 +64,11 @@ def test_objlookup_ok_populates_coordinates():
 def test_objlookup_ok_populates_all_metadata():
     """stat=OK response populates source, objname, objtype, parsename, cra2000, cdec2000."""
     with req_mock.Mocker() as m:
-        m.get(req_mock.ANY, text=LOOKUP_OK_JSON,
-              headers={"Content-type": "application/json"})
+        m.get(
+            req_mock.ANY,
+            text=LOOKUP_OK_JSON,
+            headers={"Content-type": "application/json"},
+        )
         obj = objLookup("Vega")
 
     assert obj.source == "SIMBAD"
@@ -81,13 +87,15 @@ def test_objlookup_ok_populates_all_metadata():
 def test_objlookup_error_stat_sets_status_and_msg():
     """A non-OK stat sets self.status='error' and self.msg from the JSON msg field."""
     with req_mock.Mocker() as m:
-        m.get(req_mock.ANY, text=LOOKUP_ERROR_JSON,
-              headers={"Content-type": "application/json"})
+        m.get(
+            req_mock.ANY,
+            text=LOOKUP_ERROR_JSON,
+            headers={"Content-type": "application/json"},
+        )
         obj = objLookup("NoSuchObject")
 
     assert obj.status == "error"
     assert "NoSuchObject" in obj.msg or "could not be resolved" in obj.msg
-
 
 
 # ---------------------------------------------------------------------------
@@ -98,8 +106,11 @@ def test_objlookup_error_stat_sets_status_and_msg():
 def test_objlookup_malformed_json_raises():
     """A non-JSON response body raises an Exception during JSON parsing."""
     with req_mock.Mocker() as m:
-        m.get(req_mock.ANY, text="<html>Internal Server Error</html>",
-              headers={"Content-type": "text/html"})
+        m.get(
+            req_mock.ANY,
+            text="<html>Internal Server Error</html>",
+            headers={"Content-type": "text/html"},
+        )
         with pytest.raises(Exception, match="jsondata"):
             objLookup("Vega")
 
@@ -113,8 +124,7 @@ def test_objlookup_missing_stat_key_raises():
     """JSON response missing the 'stat' key raises an Exception."""
     body = json.dumps({"ra2000": "279.23473", "dec2000": "38.78369"})
     with req_mock.Mocker() as m:
-        m.get(req_mock.ANY, text=body,
-              headers={"Content-type": "application/json"})
+        m.get(req_mock.ANY, text=body, headers={"Content-type": "application/json"})
         with pytest.raises(Exception, match="stat"):
             objLookup("Vega")
 
@@ -132,7 +142,6 @@ def test_objlookup_error_stat_missing_msg_key_raises():
     """
     body = json.dumps({"stat": "ERROR"})  # no "msg" key
     with req_mock.Mocker() as m:
-        m.get(req_mock.ANY, text=body,
-              headers={"Content-type": "application/json"})
+        m.get(req_mock.ANY, text=body, headers={"Content-type": "application/json"})
         with pytest.raises(Exception, match="(?i)msg"):
             objLookup("NoSuchObject")

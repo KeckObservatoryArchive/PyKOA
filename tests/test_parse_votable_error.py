@@ -90,8 +90,8 @@ def test_parse_votable_error_info_element_is_none():
     xml = (
         b'<?xml version="1.0"?>'
         b'<VOTABLE xmlns="http://www.ivoa.net/xml/VOTable/v1.3">'
-        b'<RESOURCE><INFO/></RESOURCE>'
-        b'</VOTABLE>'
+        b"<RESOURCE><INFO/></RESOURCE>"
+        b"</VOTABLE>"
     )
     with pytest.raises(Exception, match="(?i)no error|info"):
         _parse_votable_error(xml)
@@ -106,10 +106,10 @@ def test_parse_votable_error_info_element_has_no_text():
     xml = (
         b'<?xml version="1.0"?>'
         b'<VOTABLE xmlns="http://www.ivoa.net/xml/VOTable/v1.3">'
-        b'<RESOURCE>'
+        b"<RESOURCE>"
         b'<INFO name="QUERY_STATUS" value="ERROR"/>'
-        b'</RESOURCE>'
-        b'</VOTABLE>'
+        b"</RESOURCE>"
+        b"</VOTABLE>"
     )
     with pytest.raises(Exception, match="(?i)extract error text"):
         _parse_votable_error(xml)
