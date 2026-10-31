@@ -386,9 +386,36 @@ class Archive:
             logging.debug(f"msg= {msg:s}")
 
         if status == "ok":
-            #            cookiejar.save (cookiepath, ignore_discard=True);
-
+            # cookiejar.save() writes only non-session, non-expired cookies
+            # by default. The cookiepath was set at MozillaCookieJar
+            # construction so no path argument is needed here.
+            # Python 3.11+ MozillaCookieJar.save() creates new files at
+            # 0o600 via os.open internally; no pre-creation needed.
             cookiejar.save()
+
+            # Belt-and-suspenders: re-apply 0o600 for the re-login case
+            # where cookiepath already existed with wrong permissions
+            # (O_CREAT mode in save() only sets permissions on newly
+            # created files, not pre-existing ones). On failure, remove
+            # the cookie file so it cannot be read at unsafe permissions.
+            try:
+                os.chmod(cookiepath, 0o600)
+            except OSError as e:
+                logging.warning(
+                    f"Could not restrict cookie file permissions: {e}. "
+                    "Removing cookie file to prevent credential exposure."
+                )
+                try:
+                    os.remove(cookiepath)
+                except OSError as rm_err:
+                    logging.warning(
+                        f"Could not remove insecure cookie file "
+                        f"{cookiepath!r}: {rm_err}. Manual removal required."
+                    )
+                self.cookie_loaded = 0
+                msg = "Login failed: could not secure cookie file."
+                print(msg)
+                return
 
             msg = "Successfully login as " + userid
             self.cookie_loaded = 1
