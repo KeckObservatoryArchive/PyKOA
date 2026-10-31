@@ -48,27 +48,70 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
-import os
 import getpass
-import logging
-import time
+import http.cookiejar
 import json
+import logging
+import os
+import tempfile
+import time
+import urllib
+from datetime import date
+
+import bs4 as bs
+import requests
 
 # import ijson
 import xmltodict
-import tempfile
-import bs4 as bs
-
-import requests
-import urllib
-import http.cookiejar
-
-from datetime import date
 
 # from astropy.coordinates import name_resolve
 from astropy.table import Table
 
 from . import conf
+
+
+def _parse_votable_error(xmlstruct):
+    """Parse a nexsciTAP VOTable error response and return the error message.
+
+    Returns the INFO element text when QUERY_STATUS=ERROR is found.
+    Raises Exception if the structure is missing, unparseable, or not an error.
+    Module-level so both Archive and KoaTap can call it without inheritance.
+    """
+    try:
+        doc = xmltodict.parse(xmlstruct)
+    except Exception as e:
+        raise Exception("Failed to parse VOTable XML: " + str(e)) from e
+
+    try:
+        votbl = doc["VOTABLE"]
+    except Exception:
+        raise Exception("Not a VOTABLE format.") from None
+
+    if votbl is None:
+        raise Exception("Not a VOTABLE format.")
+
+    try:
+        info = votbl["RESOURCE"]["INFO"]
+    except Exception:
+        raise Exception("Failed to extract INFO from VOTABLE.") from None
+
+    if info is None:
+        raise Exception("No error message found.")
+
+    try:
+        infoval = info["@value"]
+    except Exception:
+        raise Exception("No error message found.") from None
+
+    if infoval.lower() != "error":
+        raise Exception("No error message found.")
+
+    try:
+        errmsg = info["#text"]
+    except Exception as e:
+        raise Exception("Failed to extract error text from INFO element.") from e
+
+    return errmsg
 
 
 class Archive:
@@ -4053,14 +4096,15 @@ class Archive:
             try:
                 content_type = self.response.headers.get("Content-type", "")
                 if "xml" in content_type:
-                    errmsg = self.extract_xmlerr(self.response.text)
+                    errmsg = _parse_votable_error(self.response.content)
             except Exception as e:
                 # extract_xmlerr failed to parse the error body (malformed XML,
                 # missing VOTABLE/INFO structure, etc.). Log for diagnostics so
                 # the failure is visible when debug is enabled, then fall back
                 # to the HTTP-status-specific messages below.
-                logging.debug(
-                    f"extract_xmlerr failed to parse error response: {str(e)}"
+                logging.warning(
+                    "Could not parse XML error body from %s response: %s",
+                    self.response.status_code, e,
                 )
 
             # 403: proprietary data access rejected or table access denied.
@@ -4907,7 +4951,7 @@ class KoaTap:
         #
         self.statusurl = ""
         if self.response.status_code == 303:
-            self.statusurl = self.response.headers["Location"]
+            self.statusurl = self.response.headers.get("Location", "")
 
         if debug:
             logging.debug("")
