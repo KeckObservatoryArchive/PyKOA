@@ -48,22 +48,21 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
-import os
 import getpass
-import logging
-import time
+import http.cookiejar
 import json
+import logging
+import os
+import tempfile
+import time
+import urllib
+from datetime import date
+
+import bs4 as bs
+import requests
 
 # import ijson
 import xmltodict
-import tempfile
-import bs4 as bs
-
-import requests
-import urllib
-import http.cookiejar
-
-from datetime import date
 
 # from astropy.coordinates import name_resolve
 from astropy.table import Table
