@@ -389,7 +389,7 @@ def test_koa_server_accepted():
 def test_ipac_subdomain_accepted():
     """https://*.ipac.caltech.edu servers must be accepted without warning."""
     with mock.patch.object(logging, "warning") as mock_warn:
-        Archive(server="https://testdds.ipac.caltech.edu/")
+        Archive(server="https://dev.ipac.caltech.edu/")
         assert not mock_warn.called, "No warning for .ipac.caltech.edu subdomain"
 
 
