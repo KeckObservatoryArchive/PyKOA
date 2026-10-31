@@ -114,6 +114,26 @@ def _parse_votable_error(xmlstruct):
     return errmsg
 
 
+def _validate_server_url(url):
+    """Validate a server URL passed via the server kwarg.
+
+    Raises ValueError if the URL does not use https. Logs a warning if the
+    domain is not a known KOA host (*.ipac.caltech.edu), so dev and test
+    servers still work without raising.
+    """
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError(
+            f"server must use https:// (got {url!r}). "
+            "Sending credentials over a non-https connection is unsafe."
+        )
+    if not parsed.netloc.rstrip("/").endswith(".ipac.caltech.edu"):
+        logging.warning(
+            f"server {url!r} is not a KOA host. "
+            "Credentials will be sent to a non-KOA server."
+        )
+
+
 class Archive:
     #
     # { Archive class
@@ -210,6 +230,7 @@ class Archive:
         self.baseurl = conf.server
         if "server" in kwargs:
             self.baseurl = kwargs.get("server")
+            _validate_server_url(self.baseurl)
 
         len_baseurl = len(self.baseurl)
         if self.baseurl[len_baseurl - 1] != "/":
@@ -316,6 +337,7 @@ class Archive:
 
         if "server" in kwargs:
             self.baseurl = kwargs.get("server")
+            _validate_server_url(self.baseurl)
 
         if self.debug:
             logging.debug("")
@@ -373,7 +395,7 @@ class Archive:
 
         if self.debug:
             logging.debug("")
-            logging.debug(f"url= [{url:s}]")
+            logging.debug(f"url= [{self.login_url:s}<credentials redacted>]")
 
         #
         #     cookiejar declared and linked to cookiepath
@@ -472,7 +494,7 @@ class Archive:
                     logging.debug("cookie saved:")
                     logging.debug(cookie)
                     logging.debug(f"cookie.name= {cookie.name:s}")
-                    logging.debug(f"cookie.value= {cookie.value:s}")
+                    logging.debug("cookie.value= [REDACTED]")
                     logging.debug(f"cookie.domain= {cookie.domain:s}")
 
         else:

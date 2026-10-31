@@ -11,7 +11,7 @@ from unittest import mock
 
 import requests
 
-from pykoa.koa.core import Archive
+from pykoa.koa.core import Archive, _validate_server_url
 
 # ---------------------------------------------------------------------------
 # Cookie file permissions
@@ -267,3 +267,142 @@ def test_chmod_and_remove_both_fail_logs_and_clears_flag(capsys):
         assert "Login failed" in captured.out, (
             "Failure message must be printed even when os.remove also fails"
         )
+
+
+# ---------------------------------------------------------------------------
+# Credential leakage in debug logs
+# ---------------------------------------------------------------------------
+
+
+def test_password_not_logged_in_debug_url(caplog):
+    """Full login URL with credentials must not appear in debug logs.
+
+    login() constructs url = login_url + userid=...&password=... and previously
+    logged the full url. Only the base login_url should appear in logs.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cookiepath = os.path.join(tmpdir, "koa.cookie")
+        a = Archive()
+        a.debug = 1
+
+        with mock.patch("requests.Session.get", side_effect=_make_ok_response):
+            with mock.patch(
+                "http.cookiejar.MozillaCookieJar.save",
+                side_effect=_fake_save(cookiepath),
+            ):
+                with caplog.at_level(logging.DEBUG):
+                    a.login(cookiepath=cookiepath, userid="testuser", password="s3cr3t")
+
+    all_logs = " ".join(caplog.messages)
+    assert "s3cr3t" not in all_logs, "Password must not appear in any log message"
+    assert "testuser" not in all_logs or "userid" not in all_logs.lower(), (
+        "Userid must not appear in the url= log line (only in login_url base is ok)"
+    )
+
+
+def test_cookie_value_not_logged(caplog):
+    """Session cookie value must not appear in debug logs.
+
+    cookie.value contains the session token. Logging it would expose active
+    sessions to anyone with access to the debug file.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cookiepath = os.path.join(tmpdir, "koa.cookie")
+        a = Archive()
+        a.debug = 1
+
+        fake_cookie = mock.MagicMock()
+        fake_cookie.name = "KOA80"
+        fake_cookie.value = "supersecrettoken123"
+        fake_cookie.domain = "koa.ipac.caltech.edu"
+        fake_cookie.discard = False
+        fake_cookie.is_expired = mock.MagicMock(return_value=False)
+
+        def fake_save_with_cookie():
+            fd = os.open(cookiepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write("# Netscape HTTP Cookie File\n")
+
+        with mock.patch("requests.Session.get", side_effect=_make_ok_response):
+            with mock.patch(
+                "http.cookiejar.MozillaCookieJar.save",
+                side_effect=fake_save_with_cookie,
+            ):
+                with mock.patch(
+                    "http.cookiejar.MozillaCookieJar.__iter__",
+                    return_value=iter([fake_cookie]),
+                ):
+                    with caplog.at_level(logging.DEBUG):
+                        a.login(
+                            cookiepath=cookiepath,
+                            userid="testuser",
+                            password="test",
+                        )
+
+    all_logs = " ".join(caplog.messages)
+    assert "supersecrettoken123" not in all_logs, (
+        "Cookie value must not appear in any log message"
+    )
+    assert "[REDACTED]" in all_logs, (
+        "Redacted placeholder must appear in logs where cookie.value was"
+    )
+
+
+# ---------------------------------------------------------------------------
+# URL injection via server kwarg
+# ---------------------------------------------------------------------------
+
+
+def test_http_server_raises():
+    """Non-https server must raise ValueError.
+
+    Passing server='http://...' would send credentials in plaintext.
+    The KOA server accepts both http and https with no redirect, so the
+    client must enforce https itself.
+    """
+    import pytest
+
+    with pytest.raises(ValueError, match="https://"):
+        Archive(server="http://koa.ipac.caltech.edu/")
+
+
+def test_non_koa_server_warns():
+    """Non-KOA https server must log a warning.
+
+    A misconfigured or compromised server could redirect credentials.
+    Warnings let dev and test servers work while alerting the user.
+    """
+    with mock.patch.object(logging, "warning") as mock_warn:
+        Archive(server="https://example.com/")
+        assert mock_warn.called, "Warning must fire for non-KOA domain"
+        assert any("example.com" in str(call) for call in mock_warn.call_args_list), (
+            "Warning must mention the server URL"
+        )
+
+
+def test_koa_server_accepted():
+    """https://koa.ipac.caltech.edu/ must be accepted without warning or error."""
+    with mock.patch.object(logging, "warning") as mock_warn:
+        a = Archive(server="https://koa.ipac.caltech.edu/")
+        assert not mock_warn.called, "No warning for the production KOA server"
+        assert a.baseurl == "https://koa.ipac.caltech.edu/"
+
+
+def test_ipac_subdomain_accepted():
+    """https://*.ipac.caltech.edu servers must be accepted without warning."""
+    with mock.patch.object(logging, "warning") as mock_warn:
+        Archive(server="https://testdds.ipac.caltech.edu/")
+        assert not mock_warn.called, "No warning for .ipac.caltech.edu subdomain"
+
+
+def test_validate_server_url_rejects_http():
+    """_validate_server_url raises ValueError for http://."""
+    import pytest
+
+    with pytest.raises(ValueError, match="https://"):
+        _validate_server_url("http://koa.ipac.caltech.edu/")
+
+
+def test_validate_server_url_accepts_https_koa():
+    """_validate_server_url passes silently for https://koa.ipac.caltech.edu."""
+    _validate_server_url("https://koa.ipac.caltech.edu/")
