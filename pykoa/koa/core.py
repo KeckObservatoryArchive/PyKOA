@@ -378,8 +378,6 @@ class Archive:
         if len(password) == 0:
             password = getpass.getpass("Password: ")
 
-        password = urllib.parse.quote(password)
-
         self.login_url = self.baseurl + "cgi-bin/KoaAPI/nph-koaLogin?"
 
         if self.debug:
