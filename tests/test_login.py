@@ -6,10 +6,12 @@ Covers:
 - Bad credentials (status!="ok"): prints failure message
 - Network error (non-Timeout): prints failure message, returns
 - requests.Timeout: re-raised
+- Credentials are URL-encoded exactly once (special characters round-trip)
 """
 
 import json
 from unittest import mock
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 import requests
@@ -25,6 +27,18 @@ def _login_response(status="ok", msg=""):
         {"Content-type": "application/json"}
     )
     return resp
+
+
+def _login_query(archive, tmp_path, userid, password):
+    """Log in against a mocked server; return the decoded query it received."""
+    with req_mock.Mocker() as m:
+        m.get(
+            req_mock.ANY,
+            json={"status": "ok", "msg": ""},
+            headers={"Content-type": "application/json"},
+        )
+        archive.login(str(tmp_path / "koa.cookie"), userid=userid, password=password)
+    return parse_qs(urlsplit(m.last_request.url).query, keep_blank_values=True)
 
 
 # ---------------------------------------------------------------------------
@@ -105,3 +119,40 @@ def test_login_timeout_raises(archive, tmp_path):
     with mock.patch("requests.Session.get", side_effect=requests.Timeout("timed out")):
         with pytest.raises(requests.Timeout, match="timed out"):
             archive.login(cookiepath, userid="u", password="p")
+
+
+# ---------------------------------------------------------------------------
+# Credentials survive URL encoding exactly once
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "password",
+    [
+        "p:ss",
+        "p@ss word",
+        "100%",
+        "a+b",
+        "a&b=c",
+        "a/b?c#d",
+        "caf\u00e9",
+        "%41",
+    ],
+)
+def test_login_password_reaches_server_unchanged(archive, tmp_path, password):
+    """The server must decode the password back to exactly what the user typed.
+
+    A password that is URL-quoted and then urlencoded again arrives with its
+    special characters still escaped (":" becomes "%3A"), so logins fail for
+    any password containing them.
+    """
+    query = _login_query(archive, tmp_path, "testuser", password)
+    assert query["password"] == [password]
+
+
+def test_login_special_userid_and_password_together(archive, tmp_path):
+    """A userid and a password that both need escaping arrive intact side by side."""
+    userid = "j.d\u00f6e+test@example.org"
+    password = "p@ss:w%rd&1 #x"
+    query = _login_query(archive, tmp_path, userid, password)
+    assert query == {"userid": [userid], "password": [password]}
