@@ -9,6 +9,7 @@ import stat
 import tempfile
 from unittest import mock
 
+import pytest
 import requests
 
 from pykoa.koa.core import Archive, _validate_server_url
@@ -360,8 +361,6 @@ def test_http_server_raises():
     The KOA server accepts both http and https with no redirect, so the
     client must enforce https itself.
     """
-    import pytest
-
     with pytest.raises(ValueError, match="https://"):
         Archive(server="http://koa.ipac.caltech.edu/")
 
@@ -395,8 +394,6 @@ def test_ipac_subdomain_accepted():
 
 def test_validate_server_url_rejects_http():
     """_validate_server_url raises ValueError for http://."""
-    import pytest
-
     with pytest.raises(ValueError, match="https://"):
         _validate_server_url("http://koa.ipac.caltech.edu/")
 
@@ -404,3 +401,37 @@ def test_validate_server_url_rejects_http():
 def test_validate_server_url_accepts_https_koa():
     """_validate_server_url passes silently for https://koa.ipac.caltech.edu."""
     _validate_server_url("https://koa.ipac.caltech.edu/")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://koa.ipac.caltech.edu:8443/",
+        "https://KOA.IPAC.CALTECH.EDU/",
+        "https://koa.ipac.caltech.edu:8443/some/path",
+        "https://koa.ipac.caltech.edu./",
+    ],
+)
+def test_validate_server_url_koa_host_variants_no_warning(url):
+    """Port, hostname case and a trailing FQDN dot must not false-warn."""
+    with mock.patch.object(logging, "warning") as mock_warn:
+        _validate_server_url(url)
+    assert not mock_warn.called
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://koa.ipac.caltech.edu.evil.example/",
+        "https://koa.ipac.caltech.edu@evil.example/",
+        "https://evil.example:443/.ipac.caltech.edu",
+        "https://koa.ipac.caltech.edu../",
+        "https://",
+    ],
+)
+def test_validate_server_url_non_koa_host_warns(url):
+    """Look-alike and malformed URLs must still trigger the non-KOA warning."""
+    with mock.patch.object(logging, "warning") as mock_warn:
+        _validate_server_url(url)
+    assert mock_warn.call_count == 1
+    assert "is not a KOA host" in mock_warn.call_args.args[0]

@@ -127,7 +127,8 @@ def _validate_server_url(url):
             f"server must use https:// (got {url!r}). "
             "Sending credentials over a non-https connection is unsafe."
         )
-    if not parsed.netloc.rstrip("/").endswith(".ipac.caltech.edu"):
+    # hostname drops port/userinfo and lowercases; removesuffix drops an FQDN's root dot.
+    if not (parsed.hostname or "").removesuffix(".").endswith(".ipac.caltech.edu"):
         logging.warning(
             f"server {url!r} is not a KOA host. "
             "Credentials will be sent to a non-KOA server."
